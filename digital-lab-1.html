@@ -325,6 +325,16 @@ textarea{width:100%;min-height:5em;resize:vertical}
 .hx.badv{border-color:var(--bad)!important}
 .qcode{font-size:14px;font-weight:700;color:var(--bit);white-space:nowrap}
 .qch{width:3em;text-align:center;font-size:22px!important;padding:2px!important;background:var(--paper)!important;border:2px solid var(--ink)!important}
+/* 小出し */
+.locked{display:none!important}
+.pop{animation:pop .45s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.more{justify-self:center;display:flex;align-items:center;gap:10px;border:2px dashed var(--bit);background:var(--bit-soft);color:var(--bit);border-radius:999px;padding:10px 24px;font-weight:700;font-size:16px}
+.more small{font-family:var(--mono);font-size:12px;opacity:.8}
+.more i{font-style:normal;animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(3px)}}
+.more:hover{background:var(--bit);color:var(--paper)}
+.screen.intro .more,.sumlist .more{grid-column:1/-1}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -756,6 +766,7 @@ function go(i){cur=Math.max(0,Math.min(screens.length-1,i));visited.add(cur);
   $('#scroll').scrollTop=0;$('#prevBtn').disabled=cur===0;
   const last=cur===screens.length-1;$('#nextBtn').disabled=last;
   $('#nextBtn').textContent=last?'おわり':'次へ：'+screens[cur+1].dataset.t+' →';
+  updStep();
   $('#where').textContent=`${cur+1} / ${screens.length}　${screens[cur].dataset.t}`;
   $('#progFill').style.width=(visited.size/screens.length*100)+'%';$('#progTxt').textContent=`${visited.size}/${screens.length}`;
   store.set('dl1-screen',cur)}
@@ -772,8 +783,27 @@ function nav(i){if(busy||i<0||i>=screens.length||i===cur)return;
   setTimeout(()=>{go(i);const sc=screens[i];sc.classList.remove('enter');void sc.offsetWidth;sc.classList.add('enter')},360);
   setTimeout(()=>{tr.className='out';beep(988,.12,'triangle',.05)},1000);
   setTimeout(()=>{tr.className='';busy=false},1350)}
-$('#prevBtn').onclick=()=>nav(cur-1);$('#nextBtn').onclick=()=>nav(cur+1);
-document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')nav(cur+1);if(e.key==='ArrowLeft')nav(cur-1)});
+/* ---- 小出し表示：画面の中身を1つずつ見せる ---- */
+const steps=screens.map(sc=>{const sl=sc.querySelector('.sumlist');
+  if(sl)return [...sl.children];
+  const m=sc.querySelector('.main');if(m)return [...m.children].filter(e=>!e.classList.contains('todo'));
+  return [...sc.children].filter(e=>e.classList.contains('lab'))});
+const rev=screens.map(()=>1);
+const moreBtns=screens.map((sc,i)=>{const st=steps[i];if(st.length<2)return null;const b=document.createElement('button');b.className='more';b.type='button';
+  b.onclick=()=>reveal();st[0].parentElement.append(b);return b});
+function updStep(){const i=cur,st=steps[i];st.forEach((el,k)=>el.classList.toggle('locked',k>=rev[i]));
+  screens[i].querySelectorAll('.aside .mame').forEach(m=>{const was=m.classList.contains('locked'),now=rev[i]<st.length;m.classList.toggle('locked',now);if(was&&!now){m.classList.remove('pop');void m.offsetWidth;m.classList.add('pop')}});
+  const left=st.length-rev[i],b=moreBtns[i];
+  if(b){b.hidden=left<=0;b.innerHTML=`<span>つづきを見る</span><small>${rev[i]} / ${st.length}</small><i aria-hidden="true">▼</i>`}
+  if(left>0){$('#nextBtn').disabled=false;$('#nextBtn').textContent=`つづきを見る ▼（${rev[i]}/${st.length}）`}
+}
+function reveal(){const i=cur,st=steps[i];if(rev[i]>=st.length)return;const el=st[rev[i]];rev[i]++;
+  const last=cur===screens.length-1;$('#nextBtn').disabled=last;$('#nextBtn').textContent=last?'おわり':'次へ：'+screens[cur+1].dataset.t+' →';
+  updStep();el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
+  el.scrollIntoView({behavior:reduceM?'auto':'smooth',block:'start'});beep(660,.06,'triangle',.05);setTimeout(()=>beep(990,.08,'triangle',.05),70)}
+function forward(){if(rev[cur]<steps[cur].length)reveal();else nav(cur+1)}
+$('#prevBtn').onclick=()=>nav(cur-1);$('#nextBtn').onclick=forward;
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')forward();if(e.key==='ArrowLeft')nav(cur-1)});
 
 /* ---------- ノートの( ) ---------- */
 const blanks=$$('.blank');
