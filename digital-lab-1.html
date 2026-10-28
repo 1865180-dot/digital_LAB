@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-family:system-ui,sans-serif;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>デジタル化ラボ 1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=JetBrains+Mono:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: アプリ型。上バー＋左の「ステージ一覧」＋1画面1活動（右にノート欄）＋下に前へ/次へ */
+:root{
+  --bg:#EEF2F5; --paper:#FFFFFF; --ink:#15222E; --muted:#5A6B79; --line:#D3DCE3;
+  --bit:#1667B7; --bit-soft:#DCE9F7; --on:#F2A516; --on-soft:#FCEFD2;
+  --wave:#C93A62; --ok:#1E8A5A; --bad:#C23A3A;
+  --display:'Dela Gothic One','Hiragino Sans','Noto Sans JP',sans-serif;
+  --body:'Zen Kaku Gothic New','Hiragino Sans','Noto Sans JP','Meiryo',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'Consolas',monospace;
+  --gl:max(16px,env(safe-area-inset-left,0px)); --gr:max(16px,env(safe-area-inset-right,0px));
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F161C; --paper:#17212A; --ink:#E6EDF2; --muted:#93A4B2; --line:#2A3946;
+  --bit:#5AA6F0; --bit-soft:#1C3247; --on:#F5B83A; --on-soft:#3A2E14;
+  --wave:#F06A90; --ok:#4CC38A; --bad:#EF6B6B; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0F161C; --paper:#17212A; --ink:#E6EDF2; --muted:#93A4B2; --line:#2A3946;
+  --bit:#5AA6F0; --bit-soft:#1C3247; --on:#F5B83A; --on-soft:#3A2E14;
+  --wave:#F06A90; --ok:#4CC38A; --bad:#EF6B6B; color-scheme:dark;}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.7;overflow:hidden}
+h1,h2,h3{text-wrap:balance;margin:0}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--bit);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* ===== app shell ===== */
+.app{height:100%;display:grid;grid-template-rows:auto 1fr}
+.top{background:var(--ink);color:var(--bg);padding-block:10px;padding-left:var(--gl);padding-right:var(--gr);display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap}
+.brand{font-family:var(--display);font-size:20px;letter-spacing:.02em;white-space:nowrap}
+.brand small{font-family:var(--body);font-weight:700;font-size:12px;opacity:.7;margin-left:8px}
+.prog{flex:1;min-width:120px;display:flex;align-items:center;gap:10px}
+.prog .track{flex:1;height:8px;border-radius:4px;background:color-mix(in srgb,var(--bg) 22%,transparent);overflow:hidden}
+.prog .fill{height:100%;background:var(--on);width:0;transition:width .3s}
+.prog span{font-family:var(--mono);font-size:13px;opacity:.85}
+.ansbtn{font-size:13px;font-weight:700;border:1px solid color-mix(in srgb,var(--bg) 40%,transparent);background:transparent;color:var(--bg);border-radius:8px;padding:4px 12px}
+.ansbtn[aria-pressed="true"]{background:var(--on);border-color:var(--on);color:#15222E}
+
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:0}
+.rail{background:var(--paper);border-right:1px solid var(--line);overflow-y:auto;padding:12px 10px 12px var(--gl);display:flex;flex-direction:column;gap:4px}
+.rail button{display:grid;grid-template-columns:34px 1fr 18px;align-items:center;gap:8px;text-align:left;border:0;background:transparent;border-radius:10px;padding:7px 8px;font-weight:700;font-size:14px;line-height:1.35}
+.rail button:hover{background:var(--bg)}
+.rail button[aria-current="page"]{background:var(--bit);color:var(--paper)}
+.rail .n{font-family:var(--display);font-weight:400;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:var(--bg);color:var(--ink);font-size:15px}
+.rail button[aria-current="page"] .n{background:var(--paper);color:var(--bit)}
+.rail .ck{font-size:13px;color:var(--ok)}
+.rail button[aria-current="page"] .ck{color:var(--paper)}
+.rail .sub{font-size:11px;font-weight:500;opacity:.75;display:block}
+
+.stage{min-height:0;display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;min-height:0}
+.screen{padding-block:22px 28px;padding-left:max(24px,var(--gl));padding-right:var(--gr);display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px 22px;align-items:start;max-width:1280px}
+.screen[hidden]{display:none!important}
+.head{grid-column:1/-1}
+.kind{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--bit)}
+.head h2{font-family:var(--display);font-weight:400;font-size:clamp(22px,3.2vw,32px);line-height:1.3;margin-top:2px}
+.lead{color:var(--muted);max-width:64ch;margin:6px 0 0}
+.main{display:grid;gap:16px;min-width:0}
+.aside{position:sticky;top:0;display:grid;gap:12px;min-width:0}
+
+.bar{border-top:1px solid var(--line);background:var(--paper);padding-block:10px;padding-left:max(24px,var(--gl));padding-right:var(--gr);display:flex;align-items:center;gap:12px}
+.bar .where{flex:1;font-size:13px;color:var(--muted);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navbtn{border:2px solid var(--ink);background:var(--paper);border-radius:10px;padding:8px 18px;font-weight:700;white-space:nowrap}
+.navbtn.next{background:var(--bit);border-color:var(--bit);color:var(--paper)}
+.navbtn:disabled{opacity:.35;cursor:not-allowed}
+
+@media (max-width:900px){
+  .screen{grid-template-columns:minmax(0,1fr)}
+  .aside{position:static}
+}
+@media (max-width:720px){
+  .shell{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .rail{flex-direction:row;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--line);padding:8px var(--gr) 8px var(--gl)}
+  .rail button{grid-template-columns:30px auto;white-space:nowrap}
+  .rail .n{width:30px;height:30px}
+  .rail .ck,.rail .sub{display:none}
+  .screen,.bar{padding-left:var(--gl)}
+  .brand small{display:none}
+}
+
+/* ===== parts ===== */
+.lab{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:14px;min-width:0}
+.lab h3{font-size:16px;font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.row>*{min-width:0}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctrl label{font-size:14px;font-weight:700;color:var(--muted)}
+select,input[type=text],textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-width:100%}
+.btn{border:2px solid var(--ink);background:var(--paper);border-radius:10px;padding:6px 14px;font-weight:700}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn:hover{border-color:var(--bit)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--paper);padding:6px 14px;font-weight:700;font-size:14px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--bit);color:var(--paper)}
+canvas{display:block;max-width:100%;height:auto;width:100%}
+.msg{font-size:15px;font-weight:700;margin:0;min-height:1.2em}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.hint{font-size:14px;color:var(--muted);margin:0}
+
+/* note + think cards */
+.note{background:var(--paper);border:2px dashed var(--line);border-radius:14px;padding:14px 16px}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.1em;background:var(--ink);color:var(--paper);border-radius:4px;padding:1px 8px;margin-bottom:6px}
+.tag.think{background:var(--on);color:#15222E}
+.note p{margin:6px 0;font-size:15px;line-height:1.9}
+.blank{border:0;border-bottom:2px solid var(--bit);background:var(--bit-soft);border-radius:4px 4px 0 0;padding:0 10px;margin:0 2px;font-weight:700;min-width:4.5em;color:var(--muted);line-height:1.6}
+.blank.open{color:var(--bit)}
+
+/* 見つけよう */
+.predict{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.pcard{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px;align-content:start}
+.pcard .what{font-weight:700}
+.pcard .size{font-family:var(--mono);font-size:20px;font-weight:700;min-height:1.4em}
+.choice{display:flex;gap:6px}
+.choice button{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 0;font-weight:700}
+.choice button[aria-pressed="true"]{background:var(--wave);border-color:var(--wave);color:var(--paper)}
+.dots{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end}
+.dots figure{margin:0;display:grid;gap:4px}
+.dots canvas{width:auto}
+.dots figcaption{font-size:13px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;background:var(--bg)}
+
+/* 1 analog */
+.thermo{width:34px;height:200px;border:2px solid var(--ink);border-radius:17px 17px 6px 6px;position:relative;overflow:hidden;
+  background:repeating-linear-gradient(to top,transparent 0 10px,var(--line) 10px 11px)}
+.thermo .fill{position:absolute;left:0;right:0;bottom:0;background:var(--wave)}
+.dig{font-family:var(--mono);font-weight:700;font-size:44px;background:#15222E;color:#F5B83A;border-radius:8px;padding:4px 16px;letter-spacing:.04em;min-width:5.2ch;text-align:right}
+.lamp{display:flex;align-items:center;gap:14px}
+input[type=range]{width:100%;accent-color:var(--bit)}
+
+/* 2 bits */
+.bulbs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;max-width:640px}
+.bb{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:8px 0 6px;display:grid;justify-items:center;gap:2px}
+.bb svg{width:34px;height:34px}
+.bb .w{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.bb .v{font-family:var(--mono);font-weight:700;font-size:20px}
+.bb.on{border-color:var(--on);background:var(--on-soft)}
+.bb:disabled{opacity:.25;cursor:not-allowed}
+.readout{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:baseline}
+.readout b{font-family:var(--mono);font-size:30px}
+.readout span{font-size:13px;color:var(--muted);font-weight:700}
+.missions{display:flex;flex-wrap:wrap;gap:8px}
+.mission{border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:14px;font-weight:700}
+.mission.done{background:var(--ok);border-color:var(--ok);color:var(--paper)}
+.ladder{display:grid;gap:8px}
+.rung{display:grid;grid-template-columns:minmax(0,12em) minmax(0,1fr);gap:4px 16px;align-items:center;border-left:4px solid var(--bit);padding:8px 12px;background:var(--bg);border-radius:0 8px 8px 0}
+.rung .eq{font-family:var(--mono);font-weight:700;font-size:18px}
+.rung .ex{font-size:14px;color:var(--muted)}
+@media (max-width:560px){.rung{grid-template-columns:1fr}}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{border:1px solid var(--line);padding:4px 10px;text-align:center}
+th{font-size:13px;color:var(--muted)}
+td.hi{background:var(--on-soft);font-weight:700}
+
+/* 3 sound */
+.steps{display:flex;flex-wrap:wrap;gap:6px}
+.steps button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 12px;font-weight:700;font-size:14px}
+.steps button[aria-current="step"]{background:var(--wave);border-color:var(--wave);color:var(--paper)}
+.stepdesc{font-size:18px;font-weight:700;margin:0}
+.stepdesc em{font-style:normal;color:var(--wave)}
+.bits-out{font-family:var(--mono);font-size:14px;word-break:break-all;background:var(--bg);border-radius:8px;padding:10px 12px}
+.info{font-family:var(--mono);font-size:15px;background:var(--bg);border-radius:8px;padding:10px 12px}
+.info b{font-size:22px;color:var(--bit)}
+.filebtn{display:inline-block;cursor:pointer}
+
+/* 4 text */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
+@media (max-width:560px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.flow div{border-top:3px solid var(--bit);padding-top:4px}
+.codetbl td{font-size:18px;padding:2px 6px;min-width:34px}
+.codetbl th{font-family:var(--mono)}
+.codetbl td.found{background:var(--on);color:#15222E}
+.quiz-bits{font-family:var(--mono);font-size:20px;line-height:2;display:flex;flex-wrap:wrap;gap:4px 18px}
+.quiz-bits span{background:var(--bg);border-radius:6px;padding:0 8px}
+.hex4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;font-family:var(--mono);font-size:13px}
+.hex4 div{background:var(--bg);border-radius:4px;text-align:center;padding:2px 0}
+textarea{width:100%;min-height:5em;resize:vertical}
+.check3{display:flex;gap:6px;flex-wrap:wrap}
+.check3 button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 12px;font-weight:700;font-size:14px}
+.check3 button[aria-pressed="true"]{background:var(--bit);border-color:var(--bit);color:var(--paper)}
+/* intro + todo */
+.screen.intro{grid-template-columns:minmax(0,1fr);max-width:980px;gap:16px}
+.hero{padding-block:10px 6px;display:grid;gap:8px}
+.hero h1{font-family:var(--display);font-weight:400;font-size:clamp(32px,5.5vw,54px);line-height:1.2}
+.hero h1 span{color:var(--bit)}
+.navbtn.big{font-size:18px;padding:12px 28px}
+.goals,.howto{margin:0;padding-left:1.4em;display:grid;gap:6px}
+.flowcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.flowcards button{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;font-weight:700;line-height:1.35}
+.flowcards button:hover{border-color:var(--bit)}
+.flowcards .n{font-family:var(--display);font-weight:400;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:var(--ink);color:var(--paper)}
+.flowcards small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.todo{background:var(--on-soft);border-radius:14px;padding:12px 16px 12px 14px}
+.todo .tag{background:var(--on);color:#15222E}
+.todo ol{margin:2px 0 0;padding-left:1.5em;display:grid;gap:2px;font-weight:700}
+/* splash（スタート演出）: 単一の暗いトーンで固定 */
+#splash{position:fixed;inset:0;z-index:50;background:#0E1A24;color:#E6EDF2;display:grid;place-items:center;transition:opacity .5s;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+#splash.fade{opacity:0;pointer-events:none}
+#spCv{position:absolute;inset:0;width:100%;height:100%}
+.sp-in{position:relative;text-align:center;display:grid;gap:14px;justify-items:center;transition:opacity .35s,transform .35s}
+.sp-in.out{opacity:0;transform:scale(.96);pointer-events:none}
+.sp-eye{font-size:13px;font-weight:700;letter-spacing:.2em;color:#5AA6F0}
+.sp-title{font-family:var(--display);font-weight:400;font-size:clamp(40px,9vw,86px);line-height:1.1;letter-spacing:.03em}
+.sp-title span{color:#F5B83A}
+.sp-sub{font-size:clamp(15px,2.4vw,19px);font-weight:700;color:#93A4B2}
+#spStart{margin-top:10px;font-family:var(--display);font-weight:400;font-size:clamp(22px,4vw,30px);letter-spacing:.1em;color:#0E1A24;background:#F5B83A;border:0;border-radius:999px;padding:14px 56px;box-shadow:0 0 0 6px rgba(245,184,58,.22);animation:pulse 1.8s ease-in-out infinite}
+#spStart:hover{background:#FFD06A}
+#spStart:focus-visible{outline:3px solid #5AA6F0;outline-offset:4px}
+@keyframes pulse{50%{box-shadow:0 0 0 14px rgba(245,184,58,.08)}}
+#spSkip{position:absolute;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:transparent;border:1px solid #2A3946;color:#93A4B2;border-radius:8px;padding:4px 12px;font-size:13px;font-weight:700}
+.sp-note{font-size:12px;color:#5A6B79}
+/* 画面切りかえの演出 */
+#trans{position:fixed;inset:0;z-index:40;background:#0E1A24;color:#E6EDF2;display:grid;place-items:center;clip-path:inset(0 100% 0 0);pointer-events:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#trans.in{clip-path:inset(0 0 0 0);transition:clip-path .32s cubic-bezier(.7,0,.3,1);pointer-events:auto}
+#trans.out{clip-path:inset(0 0 0 100%);transition:clip-path .32s cubic-bezier(.7,0,.3,1)}
+.tr-box{display:grid;justify-items:center;gap:10px;text-align:center}
+.tr-k{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.25em;color:#5AA6F0}
+.tr-num{font-family:var(--display);font-size:56px;width:104px;height:104px;border-radius:24px;display:grid;place-items:center;background:#F5B83A;color:#0E1A24;transform:scale(.6) rotate(-8deg);transition:transform .4s cubic-bezier(.3,1.6,.5,1)}
+#trans.in .tr-num{transform:none}
+.tr-t{font-family:var(--display);font-size:clamp(28px,5vw,46px);line-height:1.2}
+.tr-s{font-size:16px;font-weight:700;color:#93A4B2}
+.tr-bits{font-family:var(--mono);font-size:16px;letter-spacing:.3em;color:#F06A90;min-height:1.4em}
+.screen.enter{animation:enter .4s ease-out}
+@keyframes enter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* v7 追加 */
+.cmp{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:end}
+@media (max-width:640px){.cmp{grid-template-columns:auto minmax(0,1fr)}.cmp .dig-c{grid-column:1/-1}}
+.rd{border-radius:12px;padding:12px 14px;display:grid;gap:6px;align-content:start;min-width:0}
+.rd.ana{background:color-mix(in srgb,var(--wave) 10%,var(--paper));border:2px solid var(--wave)}
+.rd.dig-c{background:var(--bit-soft);border:2px solid var(--bit)}
+.rd-k{font-size:13px;font-weight:700;color:var(--muted)}
+.rd-v{font-size:clamp(22px,3.4vw,32px);font-weight:700;word-break:break-all}
+.rd.ana .rd-v{color:var(--wave)} .rd.dig-c .rd-v{color:var(--bit)}
+.cmp2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.cmp2{grid-template-columns:1fr}}
+.why{margin:0;padding-left:1.5em;display:grid;gap:6px}
+.switch{width:76px;height:40px;border-radius:20px;border:2px solid var(--ink);background:var(--line);position:relative;flex:none}
+.switch .knob{position:absolute;top:3px;left:3px;width:30px;height:30px;border-radius:50%;background:var(--paper);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--on)} .switch[aria-checked="true"] .knob{left:39px}
+.lamp{flex-wrap:wrap}
+.explain{background:var(--bg);border-radius:10px;padding:10px 14px}
+.explain p{margin:4px 0}
+.mcard{border:2px solid var(--bit);border-radius:12px;padding:12px 16px;display:grid;gap:6px;background:var(--bit-soft)}
+.mcard.clear{border-color:var(--ok)}
+.mk{font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--bit)}
+.mq{font-size:20px;font-weight:700}
+.mq b{color:var(--wave);font-size:1.2em}
+.sum{font-size:16px;font-weight:700;color:var(--muted)}
+.bulbs10{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;max-width:520px}
+.b10 svg{width:100%;max-width:40px;height:auto;display:block;margin:auto}
+.dbl{display:grid;gap:2px}
+.dbl div{display:grid;grid-template-columns:5.5em minmax(0,1fr) auto;gap:10px;padding:2px 10px;border-radius:6px;font-size:14px}
+.dbl div span.mono{color:var(--muted);overflow-wrap:anywhere}
+.dbl div.hi{background:var(--on-soft);font-weight:700}
+.inbox{background:var(--on-soft);border:3px solid var(--on);border-radius:14px;padding:12px 14px;display:grid;gap:8px}
+.inlabel{font-size:18px;font-weight:700}
+.inlabel span{font-size:14px;color:var(--muted);font-weight:500}
+.inrow{display:flex;gap:8px}
+.bigin{flex:1;min-width:0;font-size:24px!important;padding:10px 14px!important;background:var(--paper)!important;border:2px solid var(--ink)!important;border-radius:10px!important}
+.bigin:focus{outline:3px solid var(--bit);outline-offset:2px}
+.solve{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:15px}
+.solve span{background:var(--bg);border-radius:6px;padding:2px 10px;font-weight:700}
+.solve i{font-style:normal;font-family:var(--body);font-size:13px;color:var(--muted)}
+.solve .ans{background:var(--on);color:#15222E;font-family:var(--body);font-size:18px}
+.quiz-bits span{display:grid;line-height:1.5;padding:4px 10px}
+.quiz-bits small{font-family:var(--body);font-size:11px;color:var(--muted)}
+.codetbl th.corner{font-size:10px;line-height:1.3;white-space:nowrap}
+.codetbl td.ex{background:var(--on-soft);outline:2px solid var(--on);outline-offset:-2px}
+.codetbl td.found{background:var(--bit)!important;color:var(--paper)!important}
+.h3tbl td,.h3tbl th{padding:2px 8px;font-size:13px}
+.sumlist{display:grid;gap:10px}
+.sc{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.sc .n{font-family:var(--display);width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:var(--ink);color:var(--paper);font-size:20px}
+.sc p{margin:4px 0 0}
+.sc b{color:var(--bit)}
+.kw{display:flex;flex-wrap:wrap;gap:6px}
+.kw span{background:var(--bit-soft);color:var(--bit);font-weight:700;border-radius:999px;padding:3px 12px;font-size:14px}
+.mame{border:2px solid var(--on)}
+.tag.mt{background:var(--on);color:#15222E;justify-self:start}
+.mame dl{margin:0;display:grid;gap:6px}
+.mame dt{font-weight:700;font-family:var(--mono);font-size:14px;color:var(--bit)}
+.mame dd{margin:0 0 4px;font-size:14px}
+.rung{align-items:start}
+.rung .ex b{color:var(--ink);margin-right:8px}
+.mtag{display:inline-block;font-size:11px;font-weight:700;background:var(--on);color:#15222E;border-radius:4px;padding:0 6px}
+.rung ul{margin:4px 0 0;padding-left:1.2em;display:grid;gap:1px}
+.qtbl td,.qtbl th{font-size:14px}
+.mlist{margin:0;padding-left:1.2em;display:grid;gap:6px;font-size:14px}
+.namecard{background:#15222E;color:#E6EDF2;border-radius:16px;padding:18px 20px;display:grid;gap:6px;min-width:0;position:relative;overflow:hidden}
+.namecard::after{content:"";position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:rgba(245,184,58,.14)}
+.nc-k{font-size:13px;font-weight:700;color:#F5B83A;letter-spacing:.1em}
+.nc-name{font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:1.2;word-break:break-all}
+.nc-hex{font-size:20px;font-weight:700;color:#5AA6F0;word-break:break-all}
+.nc-bin{font-size:13px;color:#93A4B2;word-break:break-all;line-height:1.6}
+.nc-f{font-size:14px;font-weight:700}
+.qno{font-size:14px;font-weight:700;color:var(--wave);letter-spacing:.08em}
+.qwork{display:grid;gap:10px}
+.qc{display:grid;grid-template-columns:4.5em minmax(0,1fr) auto auto;gap:8px 12px;align-items:center;background:var(--bg);border-radius:10px;padding:8px 12px}
+@media (max-width:640px){.qc{grid-template-columns:minmax(0,1fr) auto}.qc .qk{grid-column:1/-1}.qc .qcode{grid-column:1}}
+.qk{font-size:13px;font-weight:700;color:var(--muted)}
+.qg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.qg div{display:grid;justify-items:center;gap:4px}
+.qg span{font-size:15px;font-weight:700}
+.hx{width:2.4em;text-align:center;font-size:18px!important;padding:2px!important;background:var(--paper)!important;border:2px solid var(--line)!important}
+.hx.good{border-color:var(--ok)!important;background:color-mix(in srgb,var(--ok) 15%,var(--paper))!important}
+.hx.badv{border-color:var(--bad)!important}
+.qcode{font-size:14px;font-weight:700;color:var(--bit);white-space:nowrap}
+.qch{width:3em;text-align:center;font-size:22px!important;padding:2px!important;background:var(--paper)!important;border:2px solid var(--ink)!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+
+<div id="splash">
+  <canvas id="spCv" aria-hidden="true"></canvas>
+  <div class="sp-in" id="spIn">
+    <div class="sp-eye">情報の技術　情報のデジタル化(1)</div>
+    <div class="sp-title">デジタル化<span>ラボ</span></div>
+    <div class="sp-sub">音も文字も、0と1に変えてみよう</div>
+    <button id="spStart">スタート</button>
+    <div class="sp-note">音が出ます</div>
+  </div>
+  <button id="spSkip" hidden>スキップ</button>
+</div>
+
+<div id="trans" aria-hidden="true"><div class="tr-box"><div class="tr-k" id="trK"></div><div class="tr-num" id="trN"></div><div class="tr-t" id="trT"></div><div class="tr-s" id="trS"></div><div class="tr-bits" id="trB"></div></div></div>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">デジタル化ラボ<small>情報のデジタル化(1)</small></div>
+    <div class="prog" aria-label="進み具合"><div class="track"><div class="fill" id="progFill"></div></div><span id="progTxt">1/9</span></div>
+    <button class="ansbtn" id="ansAll" aria-pressed="false">答えをすべて表示</button>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" id="rail" aria-label="ステージ一覧"></nav>
+
+    <div class="stage">
+      <div class="scroll" id="scroll">
+
+<!-- ===== はじめに ===== -->
+<div class="screen intro" data-n="▶" data-t="はじめに" data-s="このアプリについて">
+  <div class="hero">
+    <div class="kind">情報の技術 ／ 1-2 ⑥ 情報のデジタル化(1)　教科書 P.108〜109</div>
+    <h1>身のまわりの情報を<br><span>0と1</span>に変えてみよう</h1>
+    <p class="lead">コンピュータは、音や文字をそのままでは扱えません。すべて「0と1」に変えて扱っています。このアプリでは、音や文字を実際に0と1に変えながら、そのしくみを学びます。</p>
+    <div class="ctrl" style="margin-top:6px"><button class="navbtn next big" id="startBtn">はじめる →</button></div>
+  </div>
+  <div class="lab">
+    <h3>今日の目標</h3>
+    <ul class="goals"><li>デジタル化した情報のしくみを理解する。</li><li>デジタル化した情報と情報の量の関係を理解する。</li></ul>
+  </div>
+  <div class="lab">
+    <h3>使い方</h3>
+    <ol class="howto">
+      <li><b>画面の上の「やること」</b>を、上から順番にやります。</li>
+      <li><b>右の「ノートにかこう」</b>で ( ？ ) に入る言葉を考えて、ノートに書きます。？を押すと答えが出ます。</li>
+      <li>終わったら<b>下の「次へ」</b>で次の画面へ。左の一覧から好きな画面にも移動できます。</li>
+    </ol>
+  </div>
+  <div class="lab">
+    <h3>今日の流れ（押すとその画面へ）</h3>
+    <div class="flowcards" id="flowcards"></div>
+  </div>
+</div>
+
+<!-- ===== 1 ===== -->
+<div class="screen" data-n="1" data-t="アナログとデジタル" data-s="細かく読める？ざっくり？" data-todo="スライダーを動かして、アナログとデジタルの読み方をくらべる|「区切る刻み」を変えて、デジタルの表示がどう変わるか見る|下のグラフで時刻を動かし、気温でも同じようにくらべる" hidden>
+  <div class="head"><div class="kind">整理しよう 1</div><h2>アナログとデジタル</h2>
+    <p class="lead">同じ温度でも、アナログとデジタルでは読み方がちがいます。アナログは目をこらせばどこまでも細かく読めますが、デジタルは決まった刻みで区切って、ざっくり表します。</p></div>
+  <div class="main">
+    <div class="lab">
+      <div class="cmp">
+        <div class="thermo" aria-hidden="true"><div class="fill" id="thFill"></div></div>
+        <div class="rd ana">
+          <div class="rd-k">アナログ（温度計の目もり）</div>
+          <div class="rd-v mono" id="anaVal">23.4718263…℃</div>
+          <p class="hint">目もりを細かく見れば、こんなに細かいところまで読める。どこで止まっても、その温度を表せる。</p>
+        </div>
+        <div class="rd dig-c">
+          <div class="rd-k">デジタル（デジタル温度計）</div>
+          <div class="dig" id="thDig">23℃</div>
+          <div class="ctrl"><label>区切る刻み</label><div class="seg" id="thStep"><button data-v="5">5℃</button><button data-v="1" aria-pressed="true">1℃</button><button data-v="0.1">0.1℃</button></div></div>
+          <p class="hint" id="thRangeTxt"></p>
+        </div>
+      </div>
+      <input type="range" id="thRange" min="0" max="40" step="any" value="23.4718263" aria-label="温度">
+      <div>
+        <h3>虫めがねで拡大してみると</h3>
+        <canvas id="thZoom" width="760" height="140"></canvas>
+        <p class="hint">赤い液は、どこで止まってもその位置の温度を表せます（アナログ）。デジタルは▲の値しか表示できないので、間の温度は近い▲にまとめられます。</p>
+      </div>
+    </div>
+    <div class="lab">
+      <h3>1日の気温をグラフにすると</h3>
+      <p class="hint">赤い線がアナログ（切れ目なく変わる気温）、青い階段がデジタル（1時間ごとに測って、刻みで数値にしたもの）。時刻のスライダーを動かして、読み取れる値をくらべよう。</p>
+      <canvas id="thGraph" width="760" height="260"></canvas>
+      <input type="range" id="tRange" min="0" max="23.99" step="any" value="14.36" aria-label="時刻">
+      <div class="cmp2">
+        <div class="rd ana"><div class="rd-k" id="tAnaK">アナログ</div><div class="rd-v mono" id="tAna"></div></div>
+        <div class="rd dig-c"><div class="rd-k" id="tDigK">デジタル</div><div class="rd-v mono" id="tDig"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="note"><span class="tag think">気づこう</span>
+      <p>・アナログ：細かく読めるけど、人によって読み方がずれることもある。</p>
+      <p>・デジタル：ざっくりだけど、だれが読んでも同じ数値になる。</p>
+      <p>・刻みを細かくするほど、デジタルはアナログに近づく。</p>
+    </div>
+    <div class="note"><span class="tag">ノートにかこう</span>
+      <p>(1) ( <button class="blank" data-a="アナログ"></button> ) 情報を切れ目のない連続した量で表す方式</p>
+      <p>(2) ( <button class="blank" data-a="デジタル"></button> ) 情報を区切られた段階的な値（数値）で表す方式</p>
+      <p>・アナログ情報からデジタル情報への変換を ( <button class="blank" data-a="デジタル化"></button> ) という。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 2-1 ===== -->
+<div class="screen" data-n="2" data-t="0と1とビット" data-s="電球で数を表す" data-todo="スイッチを押して、コンピュータが0と1を使う理由を確かめる|「電球で数を表すしくみ」を読む|ミッションを1つずつクリアする" hidden>
+  <div class="head"><div class="kind">整理しよう 2</div><h2>0と1で情報を表す</h2>
+    <p class="lead">コンピュータは、どうして0と1だけで情報を表すのでしょう。理由を確かめてから、電球を使って0と1で数を表してみよう。</p></div>
+  <div class="main">
+    <div class="lab">
+      <h3>なぜ0と1なの？</h3>
+      <ol class="why">
+        <li>コンピュータの中は、電気が通る回路でできています。</li>
+        <li>電気は「流れていない」「流れている」の<b>2つの状態</b>を、はっきり区別できます。「半分くらい」のようなあいまいさがないので、まちがえにくいのです。</li>
+        <li>そこで、<b>流れていない＝0</b>、<b>流れている＝1</b> と決めて、すべての情報を0と1の組み合わせで表します。</li>
+      </ol>
+      <div class="lamp">
+        <button class="switch" id="swBtn" role="switch" aria-checked="false" aria-label="スイッチ"><span class="knob"></span></button>
+        <svg viewBox="0 0 40 40" style="width:52px;height:52px" aria-hidden="true"><circle cx="20" cy="16" r="11" id="lampC"/><rect x="15" y="27" width="10" height="7" rx="2" fill="currentColor" opacity=".5"/></svg>
+        <b class="mono" id="lampV" style="font-size:40px;line-height:1">0</b>
+        <p class="hint" id="lampT" style="flex:1;min-width:12em"></p>
+      </div>
+      <p class="hint">この「0か1か」の1つ分を <b>1ビット(bit)</b> とよびます。電球1個で1ビットです。</p>
+    </div>
+    <div class="lab">
+      <h3>電球で数を表すしくみ</h3>
+      <div class="explain">
+        <p>電球の下の数字（128・64・32・16・8・4・2・1）は、<b>その電球をつけたときに足される数</b>です。ついている電球の数字を全部たすと、ふだん使っている数（<b>10進数</b>）になります。</p>
+        <p>例：<b>4</b>と<b>1</b>の電球をつける → 4＋1＝<b>5</b>。このとき電球の並びは <span class="mono">0000 0101</span>。これが5の<b>2進数</b>（0と1だけで表した数）です。</p>
+      </div>
+      <div class="mcard" id="mCard">
+        <div class="mk" id="mK">ミッション 1 / 4</div>
+        <div class="mq" id="mQ"></div>
+        <div class="ctrl"><button class="btn" id="mHint">ヒント</button><button class="btn primary" id="mNext" hidden>次のミッションへ →</button></div>
+        <p class="msg" id="mMsg"></p>
+      </div>
+      <div class="bulbs" id="bulbs"></div>
+      <div class="readout">
+        <div><span>2進数（電球の並び）</span><br><b id="bBin">0000 0000</b></div>
+        <div><span>10進数</span><br><b id="bDec">0</b></div>
+      </div>
+      <div class="sum mono" id="bSum"></div>
+      <button class="btn" id="bitClear" style="justify-self:start">電球を全部消す</button>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="lab">
+      <h3>電球の数と表せる数</h3>
+      <div class="tbl"><table><tr><th>電球（ビット）</th><th>表せる数</th></tr>
+        <tr><td>1</td><td>2通り</td></tr><tr><td>2</td><td>4通り</td></tr><tr><td>3</td><td>8通り</td></tr><tr><td>4</td><td>16通り</td></tr>
+        <tr><td>5</td><td>32通り</td></tr><tr><td>6</td><td>64通り</td></tr><tr><td>7</td><td>128通り</td></tr><tr><td class="hi">8</td><td class="hi">256通り</td></tr></table></div>
+      <p class="hint">電球が1個増えるごとに、表せる数は2倍。8ビットをまとめて「1バイト(B)」とよびます。</p>
+    </div>
+    <div class="lab mame"><span class="tag mt">豆知識</span><h3>ビット数でできること</h3>
+      <dl>
+        <dt>1ビット（2通り）</dt><dd>ゲームの「宝箱を開けた／まだ」「クリアした／まだ」の記録。電気のON／OFF。</dd>
+        <dt>2ビット（4通り）</dt><dd>上・下・左・右の4方向。キャラクターの向き。</dd>
+        <dt>3ビット（8通り）</dt><dd>8色。昔のパソコンは8色で絵をかいていた。</dd>
+        <dt>8ビット（256通り）</dt><dd>半角の英数字1文字。ファミコンは「8ビット」のコンピュータ。</dd>
+        <dt>16ビット（65,536通り）</dt><dd>日本語の文字1文字（全角）。</dd>
+        <dt>24ビット（約1,677万通り）</dt><dd>フルカラーの色。スマホの写真の1つの点の色。</dd>
+      </dl>
+    </div>
+    <div class="note"><span class="tag">ノートにかこう</span>
+      <p>・コンピュータは ( <button class="blank" data-a="0"></button> ) と ( <button class="blank" data-a="1"></button> ) の二つの状態の組み合わせで表現されたデジタル情報を処理する。</p>
+      <p>(1) 8bit ＝ 1 ( <button class="blank" data-a="B"></button> ) 読み方 ( <button class="blank" data-a="バイト"></button> )</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 2-2 ===== -->
+<div class="screen" data-n="2" data-t="単位の階段" data-s="B・KB・MB・GB・TB" data-todo="「×1,024 して次へ」を押して、単位の階段をのぼる|右の「なぜ1,024？」で電球を1個ずつふやす|右のノートの ( ) に入る単位と読み方を書く" hidden>
+  <div class="head"><div class="kind">整理しよう 2</div><h2>情報の量の単位</h2>
+    <p class="lead">情報の量の単位は、1,024倍ずつ大きくなります。ボタンを押して、階段をのぼろう。</p></div>
+  <div class="main">
+    <div class="lab">
+      <div class="ladder" id="ladder"></div>
+      <div class="ctrl"><button class="btn primary" id="ladderNext">×1,024 して次へ</button><button class="btn" id="ladderReset">最初から</button></div>
+    </div>
+    <div class="lab">
+      <h3>なぜ1,000ではなく1,024なの？</h3>
+      <p class="hint">電球を1個ずつふやして、表せる数がどうなるか見てみよう。</p>
+      <div class="bulbs10" id="b10"></div>
+      <div class="ctrl"><button class="btn primary" id="b10Add">電球を1個ふやす（×2）</button><button class="btn" id="b10Reset">最初から</button></div>
+      <div class="dbl" id="dbl"></div>
+      <div class="explain" id="why1024" hidden>
+        <p><b>1,024 ＝ 2<sup>10</sup>（2の10乗）</b></p>
+        <p>・<b>2</b> は、0と1の<b>2種類</b>から。電球1個ふえるごとに、表せる数が2倍になります。</p>
+        <p>・<b>10</b> は、<b>2を10回かけた</b>から。電球10個で1,024通りになり、これが1,000（キロ）にいちばん近い数です。</p>
+        <p>コンピュータは2進数で数えるので、ちょうど1,000にはなりません。そこで、1,000に近い1,024をひとまとまりにしています。</p>
+      </div>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="note"><span class="tag">ノートにかこう</span>
+      <p>(2) 1,024B ＝ 1 ( <button class="blank" data-a="KB"></button> )<br>読み方 ( <button class="blank" data-a="キロバイト"></button> )</p>
+      <p>(3) 1,024KB ＝ 1 ( <button class="blank" data-a="MB"></button> )<br>読み方 ( <button class="blank" data-a="メガバイト"></button> )</p>
+      <p>(4) 1,024MB ＝ 1 ( <button class="blank" data-a="GB"></button> )<br>読み方 ( <button class="blank" data-a="ギガバイト"></button> )</p>
+      <p>(5) 1,024GB ＝ 1 ( <button class="blank" data-a="TB"></button> )<br>読み方 ( <button class="blank" data-a="テラバイト"></button> )</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 3-1 ===== -->
+<div class="screen" data-n="3" data-t="音を0と1にする" data-s="A／D変換の5ステップ" data-todo="音を選ぶ（自分の声を録音してもよい）|「次のステップ →」を押して、①〜⑤を順番に見る|区切る数や数値の段階を変えて、0と1の数がどう変わるか見る" hidden>
+  <div class="head"><div class="kind">整理しよう 3</div><h2>音のデジタル化のしくみと A／D変換</h2>
+    <p class="lead">音を選ぶか、自分の声を録音しよう。ノートの①〜⑤と同じ順番で、音が0と1に変わるようすを見ていきます。</p></div>
+  <div class="main">
+    <div class="lab">
+      <div class="ctrl">
+        <div class="seg sndPick"><button data-s="voice" aria-pressed="true">声「あー」</button><button data-s="flute">笛</button><button data-s="chime">チャイム</button></div>
+        <button class="btn" id="recBtn">● 録音（2秒）</button>
+        <label class="btn filebtn">音声ファイル<input type="file" id="sndFile" accept="audio/*" hidden></label>
+      </div>
+      <p class="msg" id="recMsg"></p>
+      <canvas id="sndOver" width="760" height="100" aria-label="音の波形の全体"></canvas>
+      <p class="hint">四角でかこんだ部分（約0.008秒）を拡大して、下で変換していきます。</p>
+    </div>
+    <div class="lab">
+      <div class="steps" id="steps"></div>
+      <p class="stepdesc" id="stepDesc"></p>
+      <canvas id="sndStep" width="760" height="320" aria-label="デジタル化の手順の図"></canvas>
+      <div class="ctrl">
+        <button class="btn" id="stepPrev">← もどる</button><button class="btn primary" id="stepNext">次のステップ →</button>
+        <label for="ptsN">区切る数</label><select id="ptsN"><option>8</option><option selected>12</option><option>16</option><option>24</option></select>
+        <label for="lvB">数値の段階</label><select id="lvB"><option value="2">2ビット（4段階）</option><option value="3" selected>3ビット（8段階）</option><option value="4">4ビット（16段階）</option></select>
+      </div>
+      <div class="bits-out" id="bitsOut" hidden></div>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="note"><span class="tag">ノートにかこう</span>
+      <p>・アナログ信号からデジタル信号への変換を ( <button class="blank" data-a="A/D変換"></button> ) という。</p>
+      <p>① マイクで音を録音する。</p>
+      <p>② ( <button class="blank" data-a="電気信号"></button> ) に変換する。</p>
+      <p>③ 信号を一定時間で ( <button class="blank" data-a="区切る"></button> )。</p>
+      <p>④ ( <button class="blank" data-a="数値"></button> ) を求める。</p>
+      <p>⑤ 数値を0と ( <button class="blank" data-a="1"></button> ) の組み合わせに変換する。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 3-2 ===== -->
+<div class="screen" data-n="3" data-t="聞きくらべ" data-s="区切り方と音質・情報量" data-todo="「▶ もとの音」を聞く|回数とビット数を変えて「▶ デジタル化した音」を聞き、情報の量の変化を見る|下の図と表で、電話・CD・ハイレゾ・レコードをくらべる" hidden>
+  <div class="head"><div class="kind">整理しよう 3</div><h2>区切り方を変えて聞きくらべよう</h2>
+    <p class="lead">1秒に区切る回数と、数値の段階（ビット数）を変えて再生しよう。音のよさと情報の量はどう変わるかな。</p></div>
+  <div class="main">
+    <div class="lab">
+      <div class="ctrl"><label>音</label><div class="seg sndPick"><button data-s="voice" aria-pressed="true">声「あー」</button><button data-s="flute">笛</button><button data-s="chime">チャイム</button></div></div>
+      <div class="ctrl">
+        <label for="rateSel">1秒に区切る回数</label>
+        <select id="rateSel"><option value="192000">192,000回（ハイレゾ）</option><option value="96000">96,000回（ハイレゾ）</option><option value="44100">44,100回（CDと同じ）</option><option value="22050">22,050回</option><option value="11025">11,025回</option><option value="8000" selected>8,000回（電話ぐらい）</option><option value="4000">4,000回</option><option value="2000">2,000回</option></select>
+      </div>
+      <div class="ctrl">
+        <label for="bitSel">数値の段階</label>
+        <select id="bitSel"><option value="24">24ビット（約1,677万段階・ハイレゾ）</option><option value="16">16ビット（65,536段階）</option><option value="8">8ビット（256段階）</option><option value="4" selected>4ビット（16段階）</option><option value="3">3ビット（8段階）</option><option value="2">2ビット（4段階）</option><option value="1">1ビット（2段階）</option></select>
+      </div>
+      <div class="ctrl"><button class="btn primary" id="playProc">▶ デジタル化した音</button><button class="btn" id="playOrig">▶ もとの音</button><button class="btn" id="playStop">■ 止める</button></div>
+      <canvas id="sndProc" width="760" height="160" aria-label="デジタル化した波形"></canvas>
+      <div class="info" id="sndInfo"></div>
+      <p class="hint" id="hiresNote" hidden>ハイレゾの細かさは、このパソコンのスピーカーでは再生しきれないので、もとの音と同じように聞こえます。情報の量の変化に注目しよう。</p>
+    </div>
+    <div class="lab">
+      <h3>身のまわりの音は、どのくらい細かく区切っている？</h3>
+      <p class="hint">同じ音の波（約0.001秒分）を、それぞれの方法で区切ったようす。点の数が、1秒に区切る回数のちがいです。</p>
+      <canvas id="sndCmp" width="760" height="300" aria-label="電話・CD・ハイレゾ・レコードの区切り方のちがい"></canvas>
+      <div class="tbl"><table class="qtbl">
+        <tr><th>音の種類</th><th>1秒に区切る回数</th><th>数値の段階</th><th>1分の情報の量</th></tr>
+        <tr><td>電話</td><td>8,000回</td><td>8ビット（256段階）</td><td>約470KB（モノラル）</td></tr>
+        <tr><td>CD</td><td>44,100回</td><td>16ビット（65,536段階）</td><td>約10MB（ステレオ）</td></tr>
+        <tr><td>ハイレゾ</td><td>96,000〜192,000回</td><td>24ビット（約1,677万段階）</td><td>約33〜66MB（ステレオ）</td></tr>
+        <tr><td>レコード</td><td colspan="2">区切らない（アナログ）。溝の形が、そのまま音の波の形</td><td>—</td></tr>
+      </table></div>
+      <div class="explain">
+        <p><b>CDはとても細かく区切っているので、実際の音に近く聞こえます。</b>でも、1秒を44,100個に区切った「間」の音や、65,536段階の「間」の値は、記録されずに捨てられています。</p>
+        <p>ハイレゾは、CDよりさらに細かく区切って、実際の音にもっと近づけたものです。そのかわり、情報の量はCDの約3〜6倍になります。</p>
+        <p>レコードはアナログなので区切りはありませんが、ほこりや傷で雑音が入ったり、聞くたびに少しずつすり減ったりします。</p>
+      </div>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="lab mame"><span class="tag mt">豆知識</span><h3>なぜCDは44,100回？</h3>
+      <p class="hint" style="color:var(--ink)">人の耳に聞こえる音の高さは、1秒間に約20,000回ふるえる音（20,000Hz）まで。音の波をきちんと記録するには、そのふるえの<b>2倍より多い回数</b>で区切る必要があります。だから、CDは少し余裕をもって44,100回に決められました。</p>
+    </div>
+    <div class="note"><span class="tag think">考えよう</span>
+      <p>・どの設定から、音がガビガビに聞こえたかな？</p>
+      <p>・音をよくすると、情報の量はどうなる？</p>
+      <p>・CDの音質（44,100回・16ビット）と比べてみよう。</p>
+      <p>・CDとハイレゾ、情報の量はどのくらいちがう？</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 4-1 ===== -->
+<div class="screen" data-n="4" data-t="文字コード" data-s="文字を0と1にする" data-todo="黄色い入力欄に、自分の名前を入れる|1文字ずつの文字コードと2進数を見る|下の「名前カード」で、自分の名前が何バイトか確かめる" hidden>
+  <div class="head"><div class="kind">整理しよう 4</div><h2>文字（テキスト）のデジタル化</h2>
+    <p class="lead">文字には1文字ずつ番号「文字コード」がついています。教科書と同じJISコードで、文字を0と1に変えてみよう。</p></div>
+  <div class="main">
+    <div class="lab">
+      <div class="inbox">
+        <label for="txIn" class="inlabel">ここに文字を入力しよう <span>（例：自分の名前）</span></label>
+        <div class="inrow"><input type="text" id="txIn" class="bigin" value="文字のデジタル化" autocomplete="off"><button class="btn" id="txClear">消す</button></div>
+      </div>
+      <div class="flow"><div>①もとの文章</div><div>②1文字ずつ取り込む</div><div>③文字コード表で数値を探す</div><div>④2進数に変換する</div></div>
+      <div class="tbl"><table id="txTbl"></table></div>
+      <p class="msg" id="txSum"></p>
+    </div>
+    <div class="namecard" id="nameCard">
+      <div class="nc-k">あなたの名前を文字コードでいうと…</div>
+      <div class="nc-name" id="ncName"></div>
+      <div class="nc-hex mono" id="ncHex"></div>
+      <div class="nc-bin mono" id="ncBin"></div>
+      <div class="nc-f" id="ncF"></div>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="lab mame"><span class="tag mt">豆知識</span><h3>文字コードはここで使われている</h3>
+      <ul class="mlist">
+        <li><b>キーボード</b>：キーを押すと、その文字の文字コードがコンピュータに送られます。</li>
+        <li><b>メール・LINE</b>：送っているのは文字の形ではなく、文字コードの0と1です。受け取ったスマホが、文字コード表を使って文字にもどしています。</li>
+        <li><b>文字化け</b>：送る側と受け取る側で、使う文字コードのルールがちがうと、文字がでたらめに表示されます。</li>
+        <li><b>絵文字</b>：😀にも文字コードがあります。今のスマホやWebページでは、世界中の文字と絵文字を1つの表にまとめたUnicode（ユニコード）がよく使われています。</li>
+      </ul>
+    </div>
+    <div class="note"><span class="tag">ノートにかこう</span>
+      <p>・文字をデジタル化させるときに、数字に対応させるルールを ( <button class="blank" data-a="文字コード"></button> ) という。</p>
+      <p>③ 一致する数値を ( <button class="blank" data-a="文字コード"></button> ) で探す。</p>
+      <p>④ 文字コードを ( <button class="blank" data-a="2進数"></button> ) に変換する。</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 4-2 ===== -->
+<div class="screen" data-n="4" data-t="暗号解読" data-s="0と1から言葉をとりだす" data-todo="「16進数ってなに？」と「表の見方」を読む|0と1を4けたずつ16進数に直して□に書く|文字コード表で文字を探して「文字」の□に書き、「答え合わせ」" hidden>
+  <div class="head"><div class="kind">チャレンジ</div><h2>0と1から言葉をとりだそう</h2>
+    <p class="lead">0と1の列は、ある言葉の文字コードです。16進数に直して、文字コード表から文字を見つけよう。</p></div>
+  <div class="main">
+    <div class="lab">
+      <h3>16進数ってなに？</h3>
+      <div class="explain">
+        <p>ふだん使う<b>10進数</b>は、0〜9の<b>10種類</b>の数字で1けたを表します。</p>
+        <p><b>16進数</b>は、0〜9とA〜Fの<b>16種類</b>で1けたを表します。Aは10、Bは11 … Fは15のことです。</p>
+        <p>2進数4けた（0000〜1111）はちょうど16通りなので、<b>2進数4けた ＝ 16進数1けた</b>にぴったり置きかえられます。長い0と1の列を短く書けるので、文字コードは16進数で書かれます。</p>
+      </div>
+    </div>
+    <div class="lab">
+      <h3>文字コード表の見方と解き方</h3>
+      <div class="explain">
+        <p>文字コードは<b>16進数4けた</b>です。表の左の「242□」は<b>最初の3けた</b>、表の上の「0〜F」は<b>最後の1けた</b>です。</p>
+        <p>例：「あ」は、<b>242</b>の行と<b>2</b>の列が交わるマスなので、文字コードは <b>2422</b> です。</p>
+      </div>
+      <div class="solve mono"><span>0010 0100 0010 0010</span><i>→ 4けたずつ16進数に</i><span>2 4 2 2</span><i>→ 表で探す</i><span>242の行 × 2の列</span><i>→</i><span class="ans">あ</span></div>
+    </div>
+    <div class="lab">
+      <h3>問題</h3>
+      <div class="qno" id="qNo"></div>
+      <p class="hint">4けたごとに、下の□に16進数を1けた書こう（合っていると緑になります）。4つそろったら、文字コード表で文字を探して「文字」の□に書こう。</p>
+      <div class="qwork" id="qWork"></div>
+      <div class="ctrl"><button class="btn primary" id="qCheck">答え合わせ</button><button class="btn" id="qHint">ヒント</button><button class="btn" id="qNext">次の問題 →</button></div>
+      <p class="msg" id="qMsg"></p>
+      <div class="tbl"><table class="codetbl" id="codeTbl"></table></div>
+      <p class="hint">黄色のマスは例の「あ」（2422）です。</p>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="lab"><h3>メモ欄</h3><textarea id="qMemo" placeholder="計算や考えたことを自由に書こう" style="min-height:8em"></textarea></div>
+    <div class="lab"><h3>2進数・10進数・16進数</h3><div class="tbl"><table class="h3tbl" id="hex4"></table></div></div>
+  </div>
+</div>
+
+<!-- ===== まとめ ===== -->
+<div class="screen" data-n="✓" data-t="まとめ" data-s="今日学んだこと" hidden>
+  <div class="head"><div class="kind">まとめ</div><h2>今日の学習のまとめ</h2>
+    <p class="lead">アナログの情報は、区切って数値にし、0と1に変えることで、コンピュータで扱えるようになります。今日学んだことをふり返ろう。</p></div>
+  <div class="main">
+    <div class="sumlist">
+      <div class="sc"><div class="n">1</div><div><h3>アナログとデジタル</h3><p>アナログは切れ目のない連続した量で、細かく読める。デジタルは区切った段階の数値で、ざっくり表す。アナログをデジタルに変えることを<b>デジタル化</b>という。</p></div></div>
+      <div class="sc"><div class="n">2</div><div><h3>0と1とビット</h3><p>コンピュータは、電気が流れていない（<b>0</b>）・流れている（<b>1</b>）の2つの状態で情報を表す。0か1かの1つ分が<b>1ビット</b>。8ビット＝<b>1バイト</b>で256通りを表せる。</p></div></div>
+      <div class="sc"><div class="n">2</div><div><h3>情報の量の単位</h3><p>B → KB → MB → GB → TB と、<b>1,024倍</b>ずつ大きくなる。1,024は2を10回かけた数（2<sup>10</sup>）。</p></div></div>
+      <div class="sc"><div class="n">3</div><div><h3>音のデジタル化</h3><p>マイクで録音 → 電気信号 → 一定時間で区切る → 数値を求める → 0と1に変換（<b>A/D変換</b>）。細かく区切るほど音はよくなるが、情報の量は大きくなる。</p></div></div>
+      <div class="sc"><div class="n">4</div><div><h3>文字のデジタル化</h3><p>文字は<b>文字コード</b>で数値に対応させ、2進数に変換する。全角の文字は1文字2バイト。</p></div></div>
+    </div>
+  </div>
+  <div class="aside">
+    <div class="lab"><h3>今日のキーワード</h3>
+      <div class="kw"><span>アナログ</span><span>デジタル</span><span>デジタル化</span><span>ビット</span><span>バイト</span><span>2進数</span><span>16進数</span><span>A/D変換</span><span>文字コード</span></div>
+    </div>
+    <div class="note"><span class="tag think">ふり返ろう</span><p>ノートの「ふり返ろう」と「学びをいかそう」を書こう。</p></div>
+    <p class="hint">次の時間：情報のデジタル化(2)（画像・動画）とデジタル情報の特徴</p>
+  </div>
+</div>
+
+      </div>
+      <div class="bar">
+        <button class="navbtn" id="prevBtn">← 前へ</button>
+        <div class="where" id="where"></div>
+        <button class="navbtn next" id="nextBtn">次へ →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const fmtB=b=>{const u=['B','KB','MB','GB','TB'];let i=0;while(b>=1024&&i<4){b/=1024;i++}return (i?b.toFixed(b<10?2:1):Math.round(b))+u[i]};
+const redrawers=[];
+
+/* ---------- 画面切りかえ ---------- */
+const screens=$$('.screen'),visited=new Set();let cur=0;
+screens.forEach((s,i)=>{const b=document.createElement('button');b.innerHTML=`<span class="n">${s.dataset.n}</span><span>${s.dataset.t}<span class="sub">${s.dataset.s}</span></span><span class="ck"></span>`;
+  b.onclick=()=>nav(i);$('#rail').append(b);
+  if(s.dataset.todo){const d=document.createElement('div');d.className='todo';d.innerHTML='<span class="tag">この画面でやること</span><ol>'+s.dataset.todo.split('|').map(t=>`<li>${t}</li>`).join('')+'</ol>';s.querySelector('.main').prepend(d)}
+  if(i>0){const c=document.createElement('button');c.innerHTML=`<span class="n">${s.dataset.n}</span><span>${s.dataset.t}<small>${s.dataset.s}</small></span>`;c.onclick=()=>nav(i);$('#flowcards').append(c)}});
+$('#startBtn').onclick=()=>nav(1);
+function go(i){cur=Math.max(0,Math.min(screens.length-1,i));visited.add(cur);
+  screens.forEach((s,k)=>s.hidden=k!==cur);
+  $$('#rail button').forEach((b,k)=>{if(k===cur)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');b.querySelector('.ck').textContent=visited.has(k)&&k!==cur?'✓':''});
+  $$('#rail button')[cur].scrollIntoView({block:'nearest',inline:'nearest'});
+  $('#scroll').scrollTop=0;$('#prevBtn').disabled=cur===0;
+  const last=cur===screens.length-1;$('#nextBtn').disabled=last;
+  $('#nextBtn').textContent=last?'おわり':'次へ：'+screens[cur+1].dataset.t+' →';
+  $('#where').textContent=`${cur+1} / ${screens.length}　${screens[cur].dataset.t}`;
+  $('#progFill').style.width=(visited.size/screens.length*100)+'%';$('#progTxt').textContent=`${visited.size}/${screens.length}`;
+  store.set('dl1-screen',cur)}
+const reduceM=matchMedia('(prefers-reduced-motion: reduce)').matches;let busy=false;
+function beep(f,d=.08,type='square',vol=.04){try{const c=ctx(),o=c.createOscillator(),v=c.createGain();o.type=type;o.frequency.value=f;v.gain.setValueAtTime(vol,c.currentTime);
+  v.gain.exponentialRampToValueAtTime(.0001,c.currentTime+d);o.connect(v);v.connect(c.destination);o.start();o.stop(c.currentTime+d+.02)}catch(e){}}
+function nav(i){if(busy||i<0||i>=screens.length||i===cur)return;
+  if(reduceM){go(i);return}
+  busy=true;const s=screens[i],tr=$('#trans'),fwd=i>cur;
+  $('#trK').textContent=`STAGE ${i} / ${screens.length-1}`;$('#trN').textContent=s.dataset.n;$('#trT').textContent=s.dataset.t;$('#trS').textContent=s.dataset.s;$('#trB').textContent='';
+  tr.className='';void tr.offsetWidth;tr.className='in';
+  (fwd?[392,523,659]:[659,523,392]).forEach((f,k)=>setTimeout(()=>beep(f),k*70));
+  let n=0;const tm=setInterval(()=>{n++;$('#trB').textContent=[...Array(Math.min(n,16))].map(()=>Math.random()<.5?0:1).join('').replace(/(.{4})(?=.)/g,'$1 ');if(n>=16)clearInterval(tm)},30);
+  setTimeout(()=>{go(i);const sc=screens[i];sc.classList.remove('enter');void sc.offsetWidth;sc.classList.add('enter')},360);
+  setTimeout(()=>{tr.className='out';beep(988,.12,'triangle',.05)},1000);
+  setTimeout(()=>{tr.className='';busy=false},1350)}
+$('#prevBtn').onclick=()=>nav(cur-1);$('#nextBtn').onclick=()=>nav(cur+1);
+document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')nav(cur+1);if(e.key==='ArrowLeft')nav(cur-1)});
+
+/* ---------- ノートの( ) ---------- */
+const blanks=$$('.blank');
+blanks.forEach(b=>{b.textContent='？';b.setAttribute('aria-label','答えを見る');b.onclick=()=>{const o=!b.classList.contains('open');b.classList.toggle('open',o);b.textContent=o?b.dataset.a:'？'}});
+$('#ansAll').onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';e.currentTarget.setAttribute('aria-pressed',on);
+  e.currentTarget.textContent=on?'答えをかくす':'答えをすべて表示';blanks.forEach(b=>{b.classList.toggle('open',on);b.textContent=on?b.dataset.a:'？'})};
+
+/* ---------- 1 アナログとデジタル ---------- */
+let thStep=1;
+const tempF=t=>18+7*Math.sin((t-9)/24*2*Math.PI)+1.2*Math.sin(t*1.3)+.6*Math.sin(t*3.1+1);
+const dq=v=>Math.round(v/thStep)*thStep, df=v=>thStep<1?v.toFixed(1):v.toFixed(0), hf=v=>thStep<1?v.toFixed(2):v.toFixed(1);
+function th(){const v=+$('#thRange').value;$('#thFill').style.height=(v/40*100)+'%';
+  $('#anaVal').textContent=v.toFixed(7)+'…℃';const d=dq(v);$('#thDig').textContent=df(d)+'℃';
+  $('#thRangeTxt').textContent=`${hf(d-thStep/2)}℃以上 ${hf(d+thStep/2)}℃未満は、ぜんぶ「${df(d)}℃」と表示される。`;drawZoom()}
+function drawZoom(){const c=$('#thZoom'),g=c.getContext('2d'),W=c.width,H=c.height,v=+$('#thRange').value,hw=Math.max(thStep*1.6,.16),lo=v-hw,hi=v+hw,L=10,R=10;
+  const x=t=>L+(t-lo)/(hi-lo)*(W-L-R),ty=40,th_=34;g.clearRect(0,0,W,H);
+  g.fillStyle=css('--bg');g.fillRect(L,ty,W-L-R,th_);g.fillStyle=css('--wave');g.fillRect(L,ty+8,x(v)-L,th_-16);
+  const major=thStep>=5?5:thStep>=1?1:.1,minor=major/10;g.strokeStyle=css('--muted');g.fillStyle=css('--muted');g.font='12px '+css('--mono');
+  for(let k=Math.ceil(lo/minor);k*minor<=hi;k++){const t=k*minor,isM=Math.abs(t/major-Math.round(t/major))<1e-6,xx=x(t);
+    g.lineWidth=isM?1.5:.7;g.beginPath();g.moveTo(xx,ty);g.lineTo(xx,ty-(isM?14:7));g.stroke();
+    if(isM){const lb=(major<1?t.toFixed(1):t.toFixed(0))+'℃';g.fillText(lb,xx-g.measureText(lb).width/2,ty-18)}}
+  g.strokeStyle=css('--wave');g.lineWidth=2;g.beginPath();g.moveTo(x(v),ty-2);g.lineTo(x(v),ty+th_+2);g.stroke();
+  const d=dq(v);g.font='bold 12px '+css('--mono');
+  for(let k=Math.ceil(lo/thStep);k*thStep<=hi;k++){const t=k*thStep,xx=x(t),sel=Math.abs(t-d)<1e-9;g.fillStyle=css('--bit');
+    g.beginPath();g.moveTo(xx,ty+th_+4);g.lineTo(xx-(sel?9:6),ty+th_+(sel?20:14));g.lineTo(xx+(sel?9:6),ty+th_+(sel?20:14));g.closePath();g.fill();
+    if(sel){const lb='表示：'+df(t)+'℃';g.fillText(lb,Math.min(W-R-g.measureText(lb).width,Math.max(L,xx-g.measureText(lb).width/2)),ty+th_+38)}}
+  g.fillStyle=css('--wave');const al='アナログ：'+v.toFixed(5)+'…℃';g.fillText(al,Math.min(W-R-g.measureText(al).width,Math.max(L,x(v)+6)),ty+th_-12>0?ty+th_+56:0)}
+$('#thRange').oninput=th;
+$$('#thStep button').forEach(b=>b.onclick=()=>{thStep=+b.dataset.v;$$('#thStep button').forEach(x=>x.setAttribute('aria-pressed',x===b));th();drawTemp()});
+function drawTemp(){const c=$('#thGraph'),g=c.getContext('2d'),W=c.width,H=c.height,L=44,R=12,T=12,B=30,tc=+$('#tRange').value;
+  g.clearRect(0,0,W,H);const x=t=>L+t/24*(W-L-R),y=v=>T+(1-(v-5)/30)*(H-T-B);
+  g.font='12px '+css('--mono');g.fillStyle=css('--muted');g.strokeStyle=css('--line');g.lineWidth=1;
+  for(let v=5;v<=35;v+=5){g.beginPath();g.moveTo(L,y(v));g.lineTo(W-R,y(v));g.stroke();g.fillText(v+'℃',4,y(v)+4)}
+  for(let t=0;t<=24;t+=3)g.fillText(t+'時',x(t)-10,H-8);
+  g.strokeStyle=css('--bit');g.lineWidth=2.5;g.beginPath();
+  for(let t=0;t<24;t++){const v=dq(tempF(t));g.moveTo(x(t),y(v));g.lineTo(x(t+1),y(v))}g.stroke();
+  g.fillStyle=css('--bit');for(let t=0;t<24;t++){g.beginPath();g.arc(x(t),y(dq(tempF(t))),3,0,7);g.fill()}
+  g.strokeStyle=css('--wave');g.lineWidth=2;g.beginPath();for(let i=0;i<=480;i++){const t=i/20;i?g.lineTo(x(t),y(tempF(t))):g.moveTo(x(t),y(tempF(t)))}g.stroke();
+  g.strokeStyle=css('--ink');g.lineWidth=1;g.setLineDash([4,4]);g.beginPath();g.moveTo(x(tc),T);g.lineTo(x(tc),H-B);g.stroke();g.setLineDash([]);
+  g.fillStyle=css('--wave');g.beginPath();g.arc(x(tc),y(tempF(tc)),6,0,7);g.fill();
+  g.fillStyle=css('--bit');g.beginPath();g.arc(x(tc),y(dq(tempF(Math.floor(tc)))),6,0,7);g.fill();
+  const hh=Math.floor(tc),mm=Math.floor((tc-hh)*60);
+  $('#tAnaK').textContent=`アナログ（${hh}時${mm}分のほんとうの気温）`;$('#tAna').textContent=tempF(tc).toFixed(6)+'…℃';
+  $('#tDigK').textContent=`デジタル（${hh}時に測って${thStep}℃刻みにした値）`;$('#tDig').textContent=df(dq(tempF(hh)))+'℃'}
+$('#tRange').oninput=drawTemp;
+redrawers.push(()=>{drawTemp();drawZoom()});th();drawTemp();
+
+/* ---------- 2 0と1とビット ---------- */
+let sw=0;function swDraw(){$('#lampC').setAttribute('fill',sw?css('--on'):css('--line'));$('#lampV').textContent=sw;$('#swBtn').setAttribute('aria-checked',!!sw);
+  $('#lampT').innerHTML=sw?'スイッチON：電気が<b>流れている</b> → 「<b>1</b>」':'スイッチOFF：電気が<b>流れていない</b> → 「<b>0</b>」。スイッチを押してみよう。'}
+$('#swBtn').onclick=()=>{sw^=1;swDraw();beep(sw?880:440,.06)};redrawers.push(swDraw);swDraw();
+const bits=Array(8).fill(0);
+const bulbSvg='<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="16" r="11"/><rect x="15" y="27" width="10" height="7" rx="2" fill="currentColor" opacity=".5"/></svg>';
+for(let i=0;i<8;i++){const b=document.createElement('button');b.className='bb';b.innerHTML=bulbSvg+`<span class="v">0</span><span class="w">${2**(7-i)}</span>`;
+  b.setAttribute('aria-label',`${2**(7-i)}の電球`);b.onclick=()=>{bits[i]^=1;bitsDraw()};$('#bulbs').append(b)}
+const missions=[
+ {t:5,q:'電球をつけて、10進数を「<b>5</b>」にしよう',h:'4 と 1 の電球をつけると、4＋1＝5 になります。'},
+ {t:13,q:'電球をつけて、10進数を「<b>13</b>」にしよう',h:'13より小さい中でいちばん大きい8をつけると、のこりは5。5は4＋1。つまり 8＋4＋1＝13。'},
+ {t:100,q:'電球をつけて、10進数を「<b>100</b>」にしよう',h:'まず64をつける（のこり36）。次に32（のこり4）。最後に4。64＋32＋4＝100。'},
+ {t:255,q:'8個の電球で表せる<b>いちばん大きい数</b>をつくろう',h:'電球を全部つけてみよう。'}];
+let mi=0,hintOn=false;
+function mDraw(){const m=missions[mi];$('#mK').textContent=`ミッション ${mi+1} / ${missions.length}`;$('#mQ').innerHTML=m.q;$('#mMsg').className='msg';$('#mMsg').textContent=hintOn?'ヒント：'+m.h:'';$('#mNext').hidden=true;$('#mCard').classList.remove('clear')}
+$('#mHint').onclick=()=>{hintOn=true;$('#mMsg').className='msg';$('#mMsg').textContent='ヒント：'+missions[mi].h};
+$('#mNext').onclick=()=>{mi++;hintOn=false;bits.fill(0);bitsDraw();mDraw()};
+function bitsDraw(){let dec=0;const on=[];
+  $$('#bulbs .bb').forEach((b,i)=>{b.classList.toggle('on',!!bits[i]);b.querySelector('.v').textContent=bits[i];
+    b.querySelector('circle').setAttribute('fill',bits[i]?css('--on'):css('--line'));if(bits[i]){dec+=2**(7-i);on.push(2**(7-i))}});
+  const bin=bits.join('');$('#bBin').textContent=bin.slice(0,4)+' '+bin.slice(4);$('#bDec').textContent=dec;
+  $('#bSum').textContent=on.length?'たし算：'+on.join(' ＋ ')+' ＝ '+dec:'たし算：どの電球もついていないので 0';
+  const m=missions[mi];if(m&&dec===m.t&&!$('#mCard').classList.contains('clear')){$('#mCard').classList.add('clear');$('#mMsg').className='msg ok';
+    if(mi<missions.length-1){$('#mMsg').textContent=`クリア！ ${m.t} は2進数で ${bin.slice(0,4)} ${bin.slice(4)} です。`;$('#mNext').hidden=false}
+    else $('#mMsg').textContent='全ミッションクリア！ 8個の電球（8ビット＝1バイト）で、0〜255の256通りを表せます。';
+    [523,659,784].forEach((f,k)=>setTimeout(()=>beep(f,.08),k*70))}}
+$('#bitClear').onclick=()=>{bits.fill(0);bitsDraw()};
+redrawers.push(bitsDraw);bitsDraw();mDraw();
+
+/* ---------- 2 単位 ---------- */
+const ladder=[
+ ['8bit = 1B','1バイト',['半角の英数字1文字','電球8個で256通り']],
+ ['1,024B = 1KB','1キロバイト',['全角の文字なら約500文字（原稿用紙1枚ちょっと）','文字だけのメール1通は数KB','ファミコンの「スーパーマリオブラザーズ」はソフト全体で約40KB']],
+ ['1,024KB = 1MB','1メガバイト',['文庫本（約10万字）約5冊分の文字','音楽（MP3）約1分','スマホの写真1枚は約3MB']],
+ ['1,024MB = 1GB','1ギガバイト',['音楽（MP3）約250曲','スマホの写真約340枚','DVD1枚は4.7GB、ゲームソフトは数GB〜数十GB']],
+ ['1,024GB = 1TB','1テラバイト',['スマホの写真約35万枚','音楽約25万曲','パソコンのSSDやハードディスクの容量でよく使われる']]];
+let rung=0;function ladderDraw(){$('#ladder').innerHTML='';ladder.slice(0,rung+1).forEach(r=>{const d=document.createElement('div');d.className='rung';
+  d.innerHTML=`<div class="eq">${r[0]}</div><div class="ex"><b>${r[1]}</b><span class="mtag">豆知識</span><ul>${r[2].map(t=>`<li>${t}</li>`).join('')}</ul></div>`;$('#ladder').append(d)});$('#ladderNext').disabled=rung>=ladder.length-1}
+$('#ladderNext').onclick=()=>{rung=Math.min(rung+1,ladder.length-1);ladderDraw()};$('#ladderReset').onclick=()=>{rung=0;ladderDraw()};ladderDraw();
+let dn=0;for(let i=0;i<10;i++){const d=document.createElement('div');d.className='b10';d.innerHTML=bulbSvg;$('#b10').append(d)}
+function dDraw(){$$('#b10 .b10').forEach((d,i)=>{d.classList.toggle('on',i<dn);d.querySelector('circle').setAttribute('fill',i<dn?css('--on'):css('--line'))});
+  let h='';for(let n=1;n<=dn;n++)h+=`<div class="${n===10?'hi':''}"><span>電球${n}個</span><span class="mono">${n===1?'2':Array(n).fill(2).join('×')}</span><b class="mono">${(2**n).toLocaleString()}通り</b></div>`;
+  $('#dbl').innerHTML=h;$('#why1024').hidden=dn<10;$('#b10Add').disabled=dn>=10}
+$('#b10Add').onclick=()=>{dn++;dDraw();beep(300+dn*60,.07)};$('#b10Reset').onclick=()=>{dn=0;dDraw()};redrawers.push(dDraw);dDraw();
+
+/* ---------- 3 音 ---------- */
+const SR=44100;let snd=null,actx=null,src=null;
+function synth(kind){const n=Math.round(SR*1.6),d=new Float32Array(n);
+  if(kind==='voice'){const H=40,ph=new Float64Array(H+1),F=[[750,110,1],[1150,130,.6],[2600,200,.25]];
+    for(let i=0;i<n;i++){const t=i/SR,f0=140*(1+.02*Math.sin(2*Math.PI*5*t));let s=0;
+      for(let k=1;k<=H;k++){const f=k*f0;ph[k]+=2*Math.PI*f/SR;let a=0;for(const[F0,bw,g]of F)a+=g/(1+((f-F0)/bw)**2);s+=a*Math.sin(ph[k])/k**.4}
+      d[i]=s*Math.min(1,t/.08)*Math.min(1,(1.6-t)/.15)}}
+  else if(kind==='flute'){let p=0;for(let i=0;i<n;i++){const t=i/SR,f=880*(1+.006*Math.sin(2*Math.PI*6*t));p+=2*Math.PI*f/SR;
+      d[i]=(Math.sin(p)+.25*Math.sin(2*p)+.08*Math.sin(3*p)+.02*(Math.random()-.5))*Math.min(1,t/.06)*Math.min(1,(1.6-t)/.12)}}
+  else{for(let i=0;i<n;i++){const t=i/SR;d[i]=Math.exp(-t*2.2)*(Math.sin(2*Math.PI*659*t)+.5*Math.sin(2*Math.PI*1318*t)+.3*Math.sin(2*Math.PI*1978*t)*Math.exp(-t*4))}}
+  return{data:d,sr:SR}}
+function setSnd(s){snd=s;drawOver();drawStep();drawProc()}
+function ctx(){if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();return actx}
+function play(data,sr){const c=ctx();stop();const b=c.createBuffer(1,data.length,sr);b.getChannelData(0).set(data);
+  const s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start();src=s}
+function stop(){if(src){try{src.stop()}catch(e){}src=null}}
+const peak=d=>{let m=1e-6;for(let i=0;i<d.length;i++){const a=Math.abs(d[i]);if(a>m)m=a}return m};
+function segInfo(){const len=Math.round(snd.sr*.008);let st=Math.floor(snd.data.length*.42);
+  for(let i=st;i<st+len&&i<snd.data.length-1;i++){if(snd.data[i]<=0&&snd.data[i+1]>0){st=i;break}}return{st,len}}
+function drawOver(){const c=$('#sndOver'),g=c.getContext('2d'),W=c.width,H=c.height,d=snd.data,p=peak(d);g.clearRect(0,0,W,H);
+  g.strokeStyle=css('--line');g.beginPath();g.moveTo(0,H/2);g.lineTo(W,H/2);g.stroke();g.fillStyle=css('--wave');
+  const per=d.length/W;for(let x=0;x<W;x++){let mn=1,mx=-1;for(let i=Math.floor(x*per);i<Math.floor((x+1)*per);i++){const v=d[i]/p;if(v<mn)mn=v;if(v>mx)mx=v}
+    g.fillRect(x,H/2-mx*(H/2-6),1,Math.max(1,(mx-mn)*(H/2-6)))}
+  const{st,len}=segInfo();g.strokeStyle=css('--ink');g.lineWidth=2;g.strokeRect(st/d.length*W-3,2,Math.max(6,len/d.length*W)+6,H-4);g.lineWidth=1}
+let step=1;
+const stepTexts=['','① マイクで音を録音する。音は<em>空気のふるえ</em>です。','② マイクが空気のふるえを<em>電気信号</em>に変換する。（アナログ信号）',
+ '③ 信号を<em>一定時間で区切る</em>。（標本化）','④ 区切った点の<em>数値</em>を求める。（量子化）','⑤ 数値を<em>0と1の組み合わせ</em>に変換する。（符号化）'];
+['①録音','②電気信号','③区切る','④数値','⑤0と1'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>{step=i+1;drawStep()};$('#steps').append(b)});
+function drawStep(){const c=$('#sndStep'),g=c.getContext('2d'),W=c.width,H=c.height;g.clearRect(0,0,W,H);
+  $$('#steps button').forEach((b,i)=>{if(i+1===step)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});
+  $('#stepDesc').innerHTML=stepTexts[step];$('#stepPrev').disabled=step===1;$('#stepNext').disabled=step===5;
+  const{st,len}=segInfo(),d=snd.data;let p=1e-6;for(let i=0;i<len;i++)p=Math.max(p,Math.abs(d[st+i]||0));
+  const N=+$('#ptsN').value,nb=+$('#lvB').value,LV=2**nb,L=40,R=16,T=24,B=24,x=i=>L+i/len*(W-L-R),y=v=>T+(1-(v+1)/2)*(H-T-B),lvY=k=>y(k/(LV-1)*2-1);
+  g.font='12px '+css('--mono');g.strokeStyle=css('--line');g.fillStyle=css('--muted');
+  if(step>=4){for(let k=0;k<LV;k++){g.beginPath();g.moveTo(L,lvY(k));g.lineTo(W-R,lvY(k));g.stroke();g.fillText(k,L-26,lvY(k)+4)}}
+  else{g.beginPath();g.moveTo(L,y(0));g.lineTo(W-R,y(0));g.stroke()}
+  g.strokeStyle=css('--wave');g.lineWidth=step===1?1.5:2.5;g.globalAlpha=step===1?.35:(step>=4?.45:1);g.setLineDash(step===1?[5,5]:[]);g.beginPath();
+  for(let i=0;i<len;i++){const v=(d[st+i]||0)/p;i?g.lineTo(x(i),y(v)):g.moveTo(x(i),y(v))}g.stroke();g.setLineDash([]);g.globalAlpha=1;g.lineWidth=1;
+  if(step===1){g.fillStyle=css('--muted');g.font='15px '+css('--body');g.fillText('空気のふるえ（音）→ マイクへ',L+10,T+4)}
+  const pts=[];for(let k=0;k<N;k++){const i=Math.round((k+.5)*len/N),v=(d[st+i]||0)/p;pts.push({i,v,q:Math.round((v+1)/2*(LV-1))})}
+  if(step>=3){g.strokeStyle=css('--bit');g.setLineDash([3,4]);pts.forEach(o=>{g.beginPath();g.moveTo(x(o.i),T-6);g.lineTo(x(o.i),H-B+6);g.stroke()});g.setLineDash([]);
+    if(step===3){g.fillStyle=css('--bit');pts.forEach(o=>{g.beginPath();g.arc(x(o.i),y(o.v),4,0,7);g.fill()})}}
+  if(step>=4){g.strokeStyle=css('--bit');g.lineWidth=2.5;g.beginPath();const w=(W-L-R)/N;
+    pts.forEach((o,k)=>{const xx=x(o.i)-w/2,yy=lvY(o.q);k?g.lineTo(xx,yy):g.moveTo(xx,yy);g.lineTo(xx+w,yy)});g.stroke();g.lineWidth=1;
+    g.fillStyle=css('--ink');g.font='bold 13px '+css('--mono');pts.forEach(o=>{g.beginPath();g.arc(x(o.i),lvY(o.q),4.5,0,7);g.fill();
+      const tx=step===5?o.q.toString(2).padStart(nb,'0'):String(o.q);g.fillText(tx,x(o.i)-g.measureText(tx).width/2,lvY(o.q)-9)})}
+  const bo=$('#bitsOut');bo.hidden=step<4;
+  if(step===4)bo.textContent='数値：'+pts.map(o=>o.q).join('　');
+  if(step===5)bo.innerHTML='0と1：'+pts.map(o=>o.q.toString(2).padStart(nb,'0')).join(' ')+`<br><span class="hint">${N}個 × ${nb}ビット ＝ ${N*nb}ビット（この約0.008秒の部分だけで）</span>`}
+$('#stepNext').onclick=()=>{step=Math.min(5,step+1);drawStep()};$('#stepPrev').onclick=()=>{step=Math.max(1,step-1);drawStep()};
+$('#ptsN').onchange=drawStep;$('#lvB').onchange=drawStep;
+function proc(){const d=snd.data,sr=snd.sr,R=+$('#rateSel').value,b=+$('#bitSel').value,p=peak(d),ratio=sr/R,LV=2**b,o=new Float32Array(d.length);
+  for(let i=0;i<d.length;i++){let v=d[Math.floor(Math.floor(i/ratio)*ratio)]/p;if(b<16)v=Math.round((v+1)/2*(LV-1))/(LV-1)*2-1;o[i]=v*(b<=2?.45:.8)}return o}
+function drawProc(){const c=$('#sndProc'),g=c.getContext('2d'),W=c.width,H=c.height;g.clearRect(0,0,W,H);
+  const o=proc(),d=snd.data,p=peak(d),{st}=segInfo(),len=Math.round(snd.sr*.012),x=i=>i/len*W,y=v=>H/2+8-v*(H/2-14),b=+$('#bitSel').value,k=b<=2?.45:.8;
+  g.strokeStyle=css('--wave');g.globalAlpha=.45;g.lineWidth=2;g.beginPath();for(let i=0;i<len;i++){const v=d[st+i]/p*.8;i?g.lineTo(x(i),y(v)):g.moveTo(x(i),y(v))}g.stroke();g.globalAlpha=1;
+  g.strokeStyle=css('--bit');g.lineWidth=2;g.beginPath();for(let i=0;i<len;i++){const v=o[st+i]/k*.8;i?g.lineTo(x(i),y(v)):g.moveTo(x(i),y(v))}g.stroke();
+  g.fillStyle=css('--muted');g.font='13px '+css('--body');g.fillText('赤：もとの音　青：デジタル化した音（約0.012秒分を拡大）',8,16);
+  const R=+$('#rateSel').value,sec=d.length/snd.sr;$('#hiresNote').hidden=!(R>snd.sr||b>16);
+  $('#sndInfo').innerHTML=`情報の量 ＝ ${R.toLocaleString()}回 × ${b}ビット × ${sec.toFixed(1)}秒 ÷ 8 ＝ <b>${fmtB(R*b*sec/8)}</b><br><span class="hint">この設定で1分録音すると約 ${fmtB(R*b*60/8)}（CDの音質はステレオ2ch・44,100回・16ビットで1分約10MB）</span>`}
+$('#rateSel').onchange=drawProc;$('#bitSel').onchange=drawProc;
+function drawCmp(){const c=$('#sndCmp'),g=c.getContext('2d'),W=c.width,H=c.height,L=130,R=12,rows=[['電話',8000],['CD',44100],['ハイレゾ',192000],['レコード',0]],rh=H/rows.length;
+  const f=t=>.65*Math.sin(2*Math.PI*1200*t)+.35*Math.sin(2*Math.PI*3100*t+1),T=.001,x=t=>L+t/T*(W-L-R);g.clearRect(0,0,W,H);
+  rows.forEach(([nm,R0],k)=>{const cy=rh*k+rh/2,A=rh*.36,y=v=>cy-v*A;g.fillStyle=css('--ink');g.font='bold 15px '+css('--body');g.fillText(nm,8,cy+2);
+    g.fillStyle=css('--muted');g.font='12px '+css('--mono');g.fillText(R0?R0.toLocaleString()+'回/秒':'区切らない',8,cy+20);
+    g.strokeStyle=css('--line');g.lineWidth=1;g.beginPath();g.moveTo(L,cy);g.lineTo(W-R,cy);g.stroke();
+    g.strokeStyle=css('--wave');g.globalAlpha=R0?.3:1;g.lineWidth=R0?1.5:3;g.beginPath();for(let i=0;i<=400;i++){const t=i/400*T;i?g.lineTo(x(t),y(f(t))):g.moveTo(x(t),y(f(t)))}g.stroke();g.globalAlpha=1;
+    if(R0){const n=Math.floor(T*R0);g.strokeStyle=css('--bit');g.lineWidth=2;g.beginPath();for(let j=0;j<n;j++){const t0=j/R0,t1=Math.min(T,(j+1)/R0),v=f(t0);j?g.lineTo(x(t0),y(v)):g.moveTo(x(t0),y(v));g.lineTo(x(t1),y(v))}g.stroke();
+      g.fillStyle=css('--bit');const rr=n>100?1.6:3;for(let j=0;j<n;j++){g.beginPath();g.arc(x(j/R0),y(f(j/R0)),rr,0,7);g.fill()}
+      g.fillStyle=css('--muted');g.font='12px '+css('--body');const lb=`0.001秒で${n}個`;g.fillText(lb,W-R-g.measureText(lb).width,cy-A-2)}});}
+redrawers.push(drawCmp);drawCmp();
+$('#playProc').onclick=()=>play(proc(),snd.sr);
+$('#playOrig').onclick=()=>{const d=snd.data,p=peak(d),o=new Float32Array(d.length);for(let i=0;i<d.length;i++)o[i]=d[i]/p*.8;play(o,snd.sr)};
+$('#playStop').onclick=stop;
+const pickSync=s=>$$('.sndPick button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.s===s));
+$$('.sndPick button').forEach(b=>b.onclick=()=>{pickSync(b.dataset.s);$('#recMsg').textContent='';setSnd(synth(b.dataset.s))});
+async function decode(buf,name){const c=ctx();const ab=await c.decodeAudioData(buf);let d=ab.getChannelData(0);const max=ab.sampleRate*4;if(d.length>max)d=d.slice(0,max);
+  pickSync(null);setSnd({data:new Float32Array(d),sr:ab.sampleRate});$('#recMsg').className='msg ok';$('#recMsg').textContent=name}
+$('#recBtn').onclick=async()=>{const m=$('#recMsg');try{ctx();
+  const st=await navigator.mediaDevices.getUserMedia({audio:true});const rec=new MediaRecorder(st),ch=[];rec.ondataavailable=e=>ch.push(e.data);
+  rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());try{await decode(await new Blob(ch).arrayBuffer(),'録音した声を読み込みました。')}catch(e){m.className='msg bad';m.textContent='録音を読み込めませんでした。もう一度ためしてください。'}};
+  m.className='msg';m.textContent='録音中…「あー」と声を出そう';rec.start();setTimeout(()=>rec.stop(),2000)}
+  catch(e){m.className='msg bad';m.textContent='この画面ではマイクが使えません。サンプルの音か、音声ファイルを使ってください。'}};
+$('#sndFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{await decode(await f.arrayBuffer(),`「${f.name}」を読み込みました（最初の4秒まで）。`)}catch(er){$('#recMsg').className='msg bad';$('#recMsg').textContent='このファイルは読み込めませんでした。mp3やwavなどの音声ファイルを選んでください。'}};
+redrawers.push(()=>{drawOver();drawStep();drawProc()});
+setSnd(synth('voice'));
+
+/* ---------- 4 文字 ---------- */
+let JIS=null;
+function jis(){if(JIS)return JIS;JIS=new Map();try{const dec=new TextDecoder('euc-jp');for(let a=0xA1;a<=0xF4;a++)for(let b=0xA1;b<=0xFE;b++){const s=dec.decode(new Uint8Array([a,b]));
+  if(s.length===1&&s.charCodeAt(0)!==0xFFFD&&!JIS.has(s))JIS.set(s,((a-0x80)<<8)|(b-0x80))}}catch(e){}return JIS}
+const hex=(n,l)=>n.toString(16).toUpperCase().padStart(l,'0');
+const bin4=(n,l)=>n.toString(2).padStart(l,'0').replace(/(.{4})(?=.)/g,'$1 ');
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function tx(){const t=[...$('#txIn').value].slice(0,30),m=jis();let rows='<tr><th>①②文字</th><th>③文字コード（16進数）</th><th>④2進数</th><th>大きさ</th></tr>',sum=0,miss=0;
+  if(!t.length)rows+='<tr><td colspan="4" class="hint">上の黄色い欄に文字を入力しよう</td></tr>';
+  t.forEach(ch=>{const c=ch.codePointAt(0);let code,bytes;if(c>=0x20&&c<0x7F){code=c;bytes=1}else if(m.has(ch)){code=m.get(ch);bytes=2}
+    if(code===undefined){miss++;rows+=`<tr><td>${esc(ch)}</td><td colspan="3" class="hint">文字コード表にない文字</td></tr>`;return}
+    sum+=bytes;rows+=`<tr><td style="font-size:20px">${ch===' '?'␣':esc(ch)}</td><td class="mono">${hex(code,bytes*2)}</td><td class="mono">${bin4(code,bytes*8)}</td><td class="mono">${bytes}B</td></tr>`});
+  {const okc=t.filter(ch=>{const c=ch.codePointAt(0);return (c>=0x20&&c<0x7F)||m.has(ch)});
+   const codes=okc.map(ch=>{const c=ch.codePointAt(0);return c<0x7F?[c,1]:[m.get(ch),2]});
+   $('#ncName').textContent=okc.join('')||'（名前を入力しよう）';$('#ncHex').textContent=codes.map(([c,b])=>hex(c,b*2)).join('  ');
+   $('#ncBin').textContent=codes.map(([c,b])=>c.toString(2).padStart(b*8,'0')).join(' ');
+   const by=codes.reduce((a,[,b])=>a+b,0);$('#ncF').textContent=by?`この名前は ${by}バイト（${by*8}個の0と1）でできています。`:''}
+  $('#txTbl').innerHTML=rows;$('#txSum').textContent=`合計 ${sum}バイト（${sum*8}ビット）`+(miss?`　表にない文字が${miss}個あります`:'')}
+$('#txIn').oninput=tx;$('#txClear').onclick=()=>{$('#txIn').value='';tx();$('#txIn').focus()};tx();
+$('#hex4').innerHTML='<tr><th>2進数</th><th>10進数</th><th>16進数</th></tr>'+[...Array(16)].map((_,i)=>`<tr><td class="mono">${i.toString(2).padStart(4,'0')}</td><td class="mono">${i}</td><td class="mono"><b>${hex(i,1)}</b></td></tr>`).join('');
+(function(){const m=jis(),inv=new Map();m.forEach((v,k)=>inv.set(v,k));
+  let h='<tr><th class="corner">最初の3けた ↓<br>最後の1けた →</th>'+[...Array(16)].map((_,i)=>`<th>${hex(i,1)}</th>`).join('')+'</tr>';
+  for(let r=2;r<=7;r++){h+=`<tr><th>24${r}□</th>`;for(let c=0;c<16;c++){const code=0x2400+r*16+c,ch=(code>=0x2421&&code<=0x2473)?(inv.get(code)||''):'';h+=`<td data-c="${code}"${code===0x2422?' class="ex"':''}>${ch}</td>`}h+='</tr>'}
+  $('#codeTbl').innerHTML=h})();
+const words=['いぬ','すし','さくら','でんき','ぱそこん','いりえかんじ'];let qi=0,hint=0;
+function qDraw(){const w=[...words[qi]],m=jis();hint=0;
+  $('#qNo').textContent=qi===words.length-1?`最終問題（${qi+1} / ${words.length}）`:`問題 ${qi+1} / ${words.length}`;
+  $('#qWork').innerHTML=w.map((ch,k)=>{const code=m.get(ch)||0,hx=hex(code,4),bn=code.toString(2).padStart(16,'0');
+    return `<div class="qc"><div class="qk">${k+1}文字目</div><div class="qg">${[0,1,2,3].map(j=>`<div><span class="mono">${bn.slice(j*4,j*4+4)}</span><input class="hx mono" maxlength="1" data-ok="${hx[j]}" aria-label="${k+1}文字目の${j+1}けた目"></div>`).join('')}</div><div class="qcode mono" data-code="${hx}">文字コード ____</div><input class="qch" maxlength="2" placeholder="文字" aria-label="${k+1}文字目の文字"></div>`}).join('');
+  $$('#qWork .hx').forEach(inp=>inp.oninput=()=>{inp.value=inp.value.toUpperCase().replace(/[^0-9A-F]/g,'');inp.classList.toggle('good',inp.value===inp.dataset.ok);inp.classList.toggle('badv',!!inp.value&&inp.value!==inp.dataset.ok);
+    const qc=inp.closest('.qc'),vs=[...qc.querySelectorAll('.hx')].map(i=>i.value);qc.querySelector('.qcode').textContent='文字コード '+vs.map(v=>v||'_').join('');
+    if(inp.value&&inp.nextElementSibling==null){const nx=inp.parentElement.nextElementSibling?.querySelector('.hx')||qc.querySelector('.qch');nx?.focus()}});
+  $('#qMsg').textContent='';$$('#codeTbl td').forEach(td=>td.classList.remove('found'));$('#qNext').disabled=qi>=words.length-1}
+$('#qNext').onclick=()=>{if(qi<words.length-1){qi++;qDraw()}};
+$('#qHint').onclick=()=>{const w=[...words[qi]],m=jis();if(hint>=w.length)return;const c=m.get(w[hint]);$('#codeTbl td[data-c="'+c+'"]')?.classList.add('found');
+  $('#qMsg').className='msg';$('#qMsg').textContent=`${hint+1}文字目は16進数で ${hex(c,4)}（${hex(c,4).slice(0,3)}の行 × ${hex(c,4)[3]}の列）。表の青いマスを見よう。`;hint++};
+$('#qCheck').onclick=()=>{const a=$$('#qWork .qch').map(i=>i.value.trim()).join(''),ok=a===words[qi],last=qi===words.length-1;$('#qMsg').className='msg '+(ok?'ok':'bad');
+  if(!a){$('#qMsg').textContent='「文字」の□に答えを書こう。';return}
+  $('#qMsg').textContent=ok?(last?`最終問題クリア！ 答えは「${words[qi]}」。先生の名前でした！ ${[...words[qi]].length*2}バイトのデータです。`:`正解！「${words[qi]}」は ${[...words[qi]].length*2}バイトのデータでした。「次の問題」へ進もう。`):'ちがう文字があります。16進数の□が緑になっているか確かめよう。';
+  if(ok)(last?[523,659,784,1047,1319]:[523,659,784,1047]).forEach((f,k)=>setTimeout(()=>beep(f,.09),k*80))};
+qDraw();
+['qMemo'].forEach(k=>{const el=$('#'+k);el.value=store.get('dl1-'+k)||'';el.oninput=()=>store.set('dl1-'+k,el.value)});
+
+/* テーマ変更で再描画 */
+const rd=()=>redrawers.forEach(f=>f());
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',rd);
+new MutationObserver(rd).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+go(0);
+
+/* ---------- スタート演出 ---------- */
+(function(){
+const sp=$('#splash'),cv=$('#spCv'),g=cv.getContext('2d'),reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let W=0,H=0,mode='idle',t0=0,done=false,lastK=-1,raf=0;
+function size(){const r=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*r;cv.height=H*r;g.setTransform(r,0,0,r,0,0)}
+size();addEventListener('resize',size);
+const cl=v=>Math.max(0,Math.min(1,v)),ease=v=>1-(1-v)**3;
+const cols=[];for(let i=0;i<60;i++)cols.push({x:Math.random(),y:Math.random(),v:.02+Math.random()*.05,s:[...Array(10)].map(()=>Math.random()<.5?0:1)});
+function rain(alpha){g.font='14px '+getComputedStyle(document.documentElement).getPropertyValue('--mono');g.fillStyle=`rgba(90,166,240,${alpha})`;
+  cols.forEach(c=>{if(!reduce)c.y+=c.v/60;if(c.y>1.2)c.y=-.3;c.s.forEach((b,j)=>g.fillText(b,c.x*W,(c.y*H)+j*18))})}
+function blip(f){try{const c=ctx(),o=c.createOscillator(),v=c.createGain();o.type='square';o.frequency.value=f;v.gain.setValueAtTime(.05,c.currentTime);
+  v.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.09);o.connect(v);v.connect(c.destination);o.start();o.stop(c.currentTime+.1)}catch(e){}}
+const N=16,LV=8;
+function frame(now){g.clearRect(0,0,W,H);
+  if(mode==='idle'){rain(.13);raf=requestAnimationFrame(frame);return}
+  const t=(now-t0)/1000,mx=W*.1,x0=mx,x1=W-mx,cy=H*.5,A=Math.min(H*.22,170);
+  const wy=x=>{const u=(x-x0)/(x1-x0);return cy-A*(.72*Math.sin(u*Math.PI*3.2)+.28*Math.sin(u*Math.PI*7.1+1))};
+  const fadeAll=1-cl((t-3.1)/.5);
+  rain(.08*fadeAll);
+  // 量子化の目盛り
+  const pc=ease(cl((t-1.75)/.6)),lvY=k=>cy+A-(k/(LV-1))*2*A;
+  if(pc>0){g.strokeStyle=`rgba(42,57,70,${pc*fadeAll})`;g.lineWidth=1;for(let k=0;k<LV;k++){g.beginPath();g.moveTo(x0,lvY(k));g.lineTo(x1,lvY(k));g.stroke()}}
+  // A: アナログの波
+  const pa=ease(cl(t/.9));g.strokeStyle=`rgba(240,106,144,${(1-.6*pc)*fadeAll})`;g.lineWidth=4;g.beginPath();
+  for(let x=x0;x<=x0+(x1-x0)*pa;x+=3){x===x0?g.moveTo(x,wy(x)):g.lineTo(x,wy(x))}g.stroke();
+  // B: 区切る
+  const pb=cl((t-.95)/.75),kv=Math.floor(pb*N);
+  if(kv>lastK&&kv<=N){for(let k=lastK+1;k<Math.min(kv,N);k++)blip(330+((Math.round((cy+A-wy(x0+(k+.5)*(x1-x0)/N))/(2*A)*(LV-1)))*70));lastK=kv}
+  const pts=[];for(let k=0;k<Math.min(kv,N);k++){const x=x0+(k+.5)*(x1-x0)/N,y=wy(x),q=Math.round((cy+A-y)/(2*A)*(LV-1));pts.push({x,y,q})}
+  g.strokeStyle=`rgba(90,166,240,${.55*fadeAll})`;g.lineWidth=1.5;g.setLineDash([4,5]);pts.forEach(p=>{g.beginPath();g.moveTo(p.x,cy-A-24);g.lineTo(p.x,cy+A+24);g.stroke()});g.setLineDash([]);
+  // C: 数値（階段）
+  if(pc>0){g.strokeStyle=`rgba(90,166,240,${pc*fadeAll})`;g.lineWidth=4;g.beginPath();const w=(x1-x0)/N;
+    pts.forEach((p,k)=>{const y=lvY(p.q);k?g.lineTo(p.x-w/2,y):g.moveTo(p.x-w/2,y);g.lineTo(p.x+w/2,y)});g.stroke()}
+  pts.forEach(p=>{const y=p.y+(lvY(p.q)-p.y)*pc;g.fillStyle=`rgba(245,184,58,${fadeAll})`;g.beginPath();g.arc(p.x,y,6,0,7);g.fill()});
+  // 0と1
+  const pd=cl((t-2.3)/.4),up=ease(cl((t-2.9)/.8));
+  if(pd>0){g.font=`bold ${Math.max(11,Math.min(18,(x1-x0)/N/2.4))}px `+getComputedStyle(document.documentElement).getPropertyValue('--mono');g.textAlign='center';
+    pts.forEach(p=>{g.fillStyle=`rgba(230,237,242,${pd*(1-up)})`;g.fillText(p.q.toString(2).padStart(3,'0'),p.x,cy+A+52-up*H*.4)});g.textAlign='left'}
+  // 文字
+  const pm=cl((t-2.8)/.4)*(1-cl((t-3.8)/.4));
+  if(pm>0){g.textAlign='center';g.fillStyle=`rgba(245,184,58,${pm})`;g.font=`${Math.min(64,W*.09)}px `+getComputedStyle(document.documentElement).getPropertyValue('--display');
+    g.fillText('0と1に変換完了！',W/2,cy+12);g.fillStyle=`rgba(147,164,178,${pm})`;g.font='bold 18px '+getComputedStyle(document.documentElement).getPropertyValue('--body');
+    g.fillText('アナログ → デジタル',W/2,cy+52);g.textAlign='left'}
+  if(t>2.8&&!finale.played){finale.played=1;[523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f),i*90))}
+  if(t>4.1)return finish();
+  raf=requestAnimationFrame(frame)}
+const finale={played:0};
+function finish(){if(done)return;done=true;cancelAnimationFrame(raf);sp.classList.add('fade');setTimeout(()=>{sp.remove()},520);go(0);$('#startBtn').focus({preventScroll:true})}
+$('#spStart').onclick=()=>{ctx();if(reduce){finish();return}$('#spIn').classList.add('out');$('#spSkip').hidden=false;mode='play';t0=performance.now();blip(880)};
+$('#spSkip').onclick=finish;
+raf=requestAnimationFrame(frame);
+$('#spStart').focus();
+})();
+})();
+</script>
+
+</body>
+</html>
