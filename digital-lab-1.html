@@ -338,6 +338,12 @@ textarea{width:100%;min-height:5em;resize:vertical}
 .note.print{border:2px solid var(--wave);background:color-mix(in srgb,var(--wave) 6%,var(--paper))}
 .tag.pr{background:var(--wave);color:#fff}
 .pr-where{font-size:12px;font-weight:700;color:var(--wave);margin-left:8px}
+.gamecard{display:grid;gap:4px;text-decoration:none;color:#E6EDF2;background:#0E1A24;border-radius:14px;padding:14px 16px;border:2px solid #F5B83A}
+.gamecard .gk{font-size:12px;font-weight:700;letter-spacing:.12em;color:#5AA6F0}
+.gamecard b{font-family:var(--display);font-weight:400;font-size:22px;color:#F5B83A}
+.gamecard span{font-size:13px;color:#B7C4CF}
+.gamecard .gb{justify-self:end;font-weight:700;color:#F5B83A;font-size:14px}
+.gamecard:hover{border-color:#FFD06A}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -744,6 +750,7 @@ textarea{width:100%;min-height:5em;resize:vertical}
       <p>細かく区切るほど本物に近づくが、( <button class="blank" data-a="情報の量"></button> )は大きくなる。</p>
       <p><span class="hint">最後に「ふり返り」の○と感想を書こう。</span></p>
     </div>
+    <a class="gamecard" href="bit-runner.html" target="_blank" rel="noopener"><span class="gk">ボーナスゲーム</span><b>デジタル進化ラン</b><span>ステージが進むと、2色のドット絵からフルカラーへ。色の数と画素がふえると、絵と情報量はどう変わる？</span><span class="gb">あそぶ →</span></a>
     <p class="hint">次の時間：情報のデジタル化(2)（画像・動画）とデジタル情報の特徴</p>
   </div>
 </div>
