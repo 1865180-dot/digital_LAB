@@ -121,11 +121,11 @@ const tune=(ns,step=90)=>ns.forEach((f,i)=>setTimeout(()=>snd(f,.12,.05),i*step)
 
 /* ===== 乱数とステージ作り ===== */
 function rng(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
-let stage=0,map,cols,enemies,coins,goalX,parts=[];
+let stage=0,map,cols,enemies,coins,goalX,parts=[],plats=[],ufo=null,secret=false,secretN=0;
 function build(si){
   const E=ERAS[si],R=rng(1234+si*777);cols=E.len;const rows=VH/T;
   map=Array.from({length:rows},()=>new Uint8Array(cols));
-  enemies=[];coins=[];
+  enemies=[];coins=[];plats=[];
   const ri=(a,b)=>a+Math.floor(R()*(b-a+1));
   let x=0,gh=7;
   const ground=(x0,x1,top)=>{for(let c=x0;c<x1&&c<cols;c++)for(let r=top;r<rows;r++)map[r][c]=1};
@@ -139,6 +139,7 @@ function build(si){
     if(R()<.55){ // 空中ブロック
       const py=gh-4,px=x+ri(0,Math.max(0,L-4)),pl=ri(2,4);
       for(let c=px;c<px+pl&&c<cols;c++)map[py][c]=R()<.3?3:2;
+      plats.push({x:px*T,y:py*T,w:pl*T});
       if(R()<.6)for(let c=px;c<px+pl;c++)coins.push({x:c*T+8,y:(py-1)*T+8,got:false});
     }else if(R()<.5){for(let c=x+1;c<x+Math.min(L,4);c++)coins.push({x:c*T+8,y:(gh-2)*T+8,got:false})}
     x+=L;
@@ -158,7 +159,22 @@ function hurt(){if(P.inv>0)return;lives--;snd(220,.4,.06,.3);shake=12;
 
 function step(){
   frame++;const E=ERAS[stage];
+  if(ufo&&ufo.state==='leave'){ufo.t++;ufo.x+=3;ufo.y-=1.6;P.y=Math.min(P.y+2.5,(7*T)-P.h)}
   if(state!=='play')return;
+  if(ufo){ufo.t++;
+    if(ufo.state==='hover'){ufo.x=ufo.bx+Math.sin(ufo.t*.02)*22;ufo.y=ufo.by+Math.sin(ufo.t*.05)*3;
+      if(P.x<ufo.x+12&&P.x+P.w>ufo.x-12&&P.y<ufo.y+8&&P.y+P.h>ufo.y-6){ufo.state='carry';secret=true;P.vx=P.vy=0;keys={};
+        [392,523,659,784,988,1175].forEach((f,i)=>setTimeout(()=>snd(f,.15,.05,1.2),i*70));shake=6}}
+    else if(ufo.state==='carry'){
+      ufo.x+=5;ufo.y+=(26-ufo.y)*.05;
+      P.x=ufo.x-P.w/2;P.y=ufo.y+14+Math.sin(frame*.15)*1.5;P.walk+=.2;
+      if(frame%3===0)parts.push({x:ufo.x+(Math.random()-.5)*14,y:ufo.y+6,vx:0,vy:.6,g:0,t:24,c:'rgba(140,255,200,.6)',s:1.4});
+      for(const c of coins)if(!c.got&&Math.abs(c.x-ufo.x)<10&&c.y<ufo.y+40){c.got=true;coinsN++;snd(1320,.06,.03,1.3)}
+      cam+=(Math.max(0,Math.min(P.x-VW*.4,cols*T-VW))-cam)*.2;
+      if(ufo.x>goalX+40){ufo.state='leave';P.vy=0;coinsN+=10;secretN++;state='clear';tune([523,659,784,1047,1319,1568],100);setTimeout(showClear,1100)}
+      for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.t--}parts=parts.filter(p=>p.t>0);if(shake>0)shake--;
+      if(frame%60===0&&timeLeft>0)timeLeft--;
+      return}}
   if(frame%60===0){timeLeft--;if(timeLeft<=0){timeLeft=0;lives=1;hurt();if(state==='play')timeLeft=E.time}}
   const L=keys.L,Rr=keys.R,J=keys.J;
   const acc=P.on?.28:.18,max=2.2;
@@ -281,6 +297,7 @@ function drawWorld(g,era){
   for(const e of enemies){if(e.dead>20)continue;const sq=e.dead?.4:1;
     if(e.fly){drawVirus(g,e,era)}else drawBug(g,e,era,sq)}
   // プレイヤー
+  if(ufo)drawUFO(g,ufo,era);
   if(!(P.inv>0&&Math.floor(frame/4)%2))drawBot(g,P,era);
   // 粒
   if(era>=3)for(const p of parts){g.globalAlpha=Math.min(1,p.t/15);g.fillStyle=p.c;g.beginPath();g.arc(p.x,p.y,p.s,0,7);g.fill();g.globalAlpha=1}
@@ -306,6 +323,21 @@ function drawBot(g,p,era){
   if(era>=1){g.fillStyle='#2F3A4A';g.fillRect(x+5.5,y-1,1,3);const on=Math.floor(frame/20)%2;
     g.fillStyle=on?'#F5B83A':'#C0862A';g.beginPath();g.arc(x+6,y-1.5,1.6,0,7);g.fill();
     if(full&&on){const gl=g.createRadialGradient(x+6,y-1.5,0,x+6,y-1.5,5);gl.addColorStop(0,'rgba(255,210,90,.6)');gl.addColorStop(1,'rgba(255,210,90,0)');g.fillStyle=gl;g.fillRect(x,y-7,12,12)}}
+}
+function drawUFO(g,u,era){
+  const x=u.x,y=u.y,full=era===4,carry=u.state==='carry';
+  if(carry){ // 光のビーム
+    if(era>=2){const bm=g.createLinearGradient(0,y,0,y+34);bm.addColorStop(0,'rgba(140,255,200,.55)');bm.addColorStop(1,'rgba(140,255,200,0)');g.fillStyle=bm}else g.fillStyle='#C8FFE0';
+    g.beginPath();g.moveTo(x-5,y+4);g.lineTo(x+5,y+4);g.lineTo(x+11,y+34);g.lineTo(x-11,y+34);g.fill()}
+  // 下の皿
+  if(full){const dg=g.createLinearGradient(0,y-2,0,y+6);dg.addColorStop(0,'#E8EEF5');dg.addColorStop(1,'#7D8A99');g.fillStyle=dg}else g.fillStyle=era<=1?'#3A3F46':'#B8C2CE';
+  g.beginPath();g.ellipse(x,y+2,15,4.5,0,0,7);g.fill();
+  // ドーム
+  if(full){const cg=g.createRadialGradient(x-2,y-5,1,x,y-3,8);cg.addColorStop(0,'rgba(220,255,240,.95)');cg.addColorStop(1,'rgba(80,200,170,.55)');g.fillStyle=cg}else g.fillStyle=era<=1?'#E8F0F0':'#7FE0C8';
+  g.beginPath();g.ellipse(x,y-1,7,6,0,Math.PI,0);g.fill();
+  // ライト
+  for(let i=-2;i<=2;i++){const on=(Math.floor(frame/6)+i+5)%3===0;g.fillStyle=on?(era<=1?'#000':'#FFE27A'):(era<=1?'#888':'#5A6470');g.beginPath();g.arc(x+i*5.5,y+3,1.1,0,7);g.fill()}
+  if(full){g.shadowColor='#8CFFC8';g.shadowBlur=8;g.strokeStyle='rgba(140,255,200,.35)';g.lineWidth=.6;g.beginPath();g.ellipse(x,y+2,15,4.5,0,0,7);g.stroke();g.shadowBlur=0}
 }
 function drawBug(g,e,era,sq){
   const x=e.x,y=e.y+e.h*(1-sq),h=e.h*sq,full=era===4,lg=Math.sin(frame*.3+e.x)*1.5;
@@ -361,11 +393,16 @@ function showTitle(){state='title';stage=0;build(0);resetPlayer();render();
   show(`<div class="k">DIGITAL EVOLUTION RUN</div><h1>デジタル<span>進化</span>ラン</h1>
   <p>ロボット「ビットくん」をゴールまで連れていこう。ステージが進むと時代も進み、2色のドット絵からフルカラーへ変わっていきます。そのぶん、コースもどんどん難しくなります。</p>
   <p class="keys">操作：← → で移動、スペース または ↑ でジャンプ（長押しで高く）　敵は上からふむとたおせます</p>
+  <p class="keys" style="color:var(--blue)">ときどき、空を見上げてみよう…？</p>
   <button class="big" id="go">スタート</button>
   <p class="keys">先生用：ステージを選んではじめる　${ERAS.map((E,i)=>`<button class="sub sel" data-s="${i}" style="display:inline-block;padding:2px 10px;margin:2px">${i+1}</button>`).join('')}</p>`);
-  $('#go').onclick=()=>{lives=3;coinsN=0;intro(0)};
-  document.querySelectorAll('.sel').forEach(b=>b.onclick=()=>{lives=3;coinsN=0;intro(+b.dataset.s)})}
-function intro(si){stage=si;build(si);resetPlayer();cam=0;parts=[];state='intro';timeLeft=ERAS[si].time;hud();render();const E=ERAS[si];
+  $('#go').onclick=()=>{lives=3;coinsN=0;secretN=0;intro(0)};
+  document.querySelectorAll('.sel').forEach(b=>b.onclick=()=>{lives=3;coinsN=0;secretN=0;intro(+b.dataset.s)})}
+function spawnUFO(){ufo=null;secret=false;if(Math.random()<.5)return;
+  const cand=plats.filter(p=>p.x>20*T&&p.x<cols*T*.7);if(!cand.length)return;
+  const p=cand[Math.floor(Math.random()*cand.length)];
+  ufo={bx:p.x+p.w/2,x:p.x+p.w/2,by:Math.max(16,p.y-44),y:0,t:Math.random()*100,state:'hover'};ufo.y=ufo.by}
+function intro(si){stage=si;build(si);spawnUFO();resetPlayer();cam=0;parts=[];state='intro';timeLeft=ERAS[si].time;hud();render();const E=ERAS[si];
   show(`<div class="k">STAGE ${si+1} / 5</div><h2>${E.name}</h2><p>${E.note}</p>${specHTML(E)}
   ${si>0?`<p>前のステージより、情報量は <b style="color:var(--gold)">${(infoBytes(E)/infoBytes(ERAS[si-1])).toFixed(1)}倍</b> になりました。</p>`:''}
   <p class="keys">コース：${E.len}マス　敵の速さ：×${E.es.toFixed(2)}${E.fly?'　空飛ぶウイルス：'+E.fly+'体':''}　制限時間：${E.time}秒</p>
@@ -374,17 +411,18 @@ function intro(si){stage=si;build(si);resetPlayer();cam=0;parts=[];state='intro'
 function showClear(){const E=ERAS[stage];
   if(stage===4){showEnd();return}
   const N=ERAS[stage+1];
-  show(`<div class="k">STAGE ${stage+1} CLEAR</div><h2>クリア！</h2><p>コイン ${coinsN}枚　のこり時間 ${timeLeft}秒</p>
+  show(`<div class="k">STAGE ${stage+1} CLEAR</div><h2>${secret?'裏ルート発見！':'クリア！'}</h2>${secret?'<p style="color:var(--ok)">UFOにつかまって、ゴールまでワープしました。ボーナス +10コイン！ このUFOは、いつも出るとはかぎりません。</p>':''}<p>コイン ${coinsN}枚　のこり時間 ${timeLeft}秒</p>
   <p>次の時代へ：<b style="color:var(--ink)">${E.col} → ${N.col}</b>、解像度 ${E.w}×${E.h} → ${N.w}×${N.h}</p>
   <button class="big" id="go">次の時代へ</button>`);
   $('#go').onclick=()=>intro(stage+1)}
 function showOver(){show(`<div class="k">GAME OVER</div><h2>ゲームオーバー</h2><p>${ERAS[stage].name}でつまずきました。このステージからやり直せます。</p>
   <button class="big" id="go">もう一度</button><button class="sub" id="top">タイトルへ</button>`);
   $('#go').onclick=()=>{lives=3;intro(stage)};$('#top').onclick=showTitle}
-function showEnd(){
+function showEnd(){const sec=secret;
   const rows=ERAS.map((E,i)=>`<tr><td>${i+1}</td><td>${E.col}</td><td>${E.bits}</td><td>${E.w}×${E.h}</td><td class="n">${fmtB(infoBytes(E))}</td></tr>`).join('');
   show(`<div class="k">ALL CLEAR</div><h2>全ステージクリア！</h2><p>コイン ${coinsN}枚。ゲームの絵は、色の数（ビット数）と画素の数がふえるほどリアルになり、そのぶん情報量も大きくなります。</p>
   <div class="tbl"><table><tr><th>ステージ</th><th>色の数</th><th>ビット</th><th>解像度</th><th>1画面の情報量</th></tr>${rows}</table></div>
+  ${secretN?`<p style="color:var(--ok)">見つけた裏ルート：${secretN}回${sec?'（最後のステージもUFOでクリア！）':''}</p>`:'<p class="keys">うわさでは、空のどこかに裏ルートがあるらしい…。</p>'}
   <p>1ステージ目とくらべると、1画面の情報量は約${Math.round(infoBytes(ERAS[4])/infoBytes(ERAS[0])).toLocaleString()}倍です。</p>
   <button class="big" id="go">もう一度あそぶ</button>`);$('#go').onclick=showTitle}
 
