@@ -401,7 +401,20 @@ $('#back').onclick=e=>{e.preventDefault();history.length>1?history.back():locati
 /* ===== ループ ===== */
 let last=performance.now(),acc=0;
 function loop(t){acc+=Math.min(100,t-last);last=t;while(acc>=1000/60){step();acc-=1000/60}if(state==='play'||state==='clear'){render();hud()}requestAnimationFrame(loop)}
-showTitle();requestAnimationFrame(loop);
+/* ===== パスワード ===== */
+const PW='みんなごうかく';
+const norm=v=>v.normalize('NFKC').replace(/\s/g,'').replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60));
+function unlocked(){try{return localStorage.getItem('drun-pass')==='1'}catch(e){return false}}
+function showLock(){state='lock';stage=0;build(0);resetPlayer();render();
+  show(`<div class="k">LOCKED</div><h2>パスワードを入れてね</h2>
+  <p>デジタル化ラボの「暗号解読」で、最終問題の答えがパスワードです。0と1から言葉をとりだそう。</p>
+  <input id="pw" type="text" autocomplete="off" placeholder="ひらがなで入力" aria-label="パスワード" style="font:inherit;font-size:22px;text-align:center;padding:10px;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--ink);width:100%;max-width:360px;justify-self:center">
+  <button class="big" id="go">ロックを解除</button><p class="keys" id="pwMsg" style="min-height:1.4em"></p>`);
+  const inp=$('#pw');inp.focus();
+  const tryIt=()=>{if(norm(inp.value)===PW){try{localStorage.setItem('drun-pass','1')}catch(e){}tune([523,659,784,1047],90);showTitle()}
+    else{$('#pwMsg').textContent='パスワードがちがいます。暗号解読の最終問題をもう一度見てみよう。';$('#pwMsg').style.color='var(--pink)';snd(200,.25,.05,.6)}};
+  $('#go').onclick=tryIt;inp.onkeydown=e=>{if(e.key==='Enter')tryIt()}}
+unlocked()?showTitle():showLock();requestAnimationFrame(loop);
 })();
 </script>
 </body>

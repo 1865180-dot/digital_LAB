@@ -184,7 +184,7 @@ td.hi{background:var(--on-soft);font-weight:700}
 .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:13px;font-weight:700;color:var(--muted)}
 @media (max-width:560px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .flow div{border-top:3px solid var(--bit);padding-top:4px}
-.codetbl td{font-size:18px;padding:2px 6px;min-width:34px}
+.codetbl td{font-size:20px;padding:2px 3px;min-width:32px}
 .codetbl th{font-family:var(--mono)}
 .codetbl td.found{background:var(--on);color:#15222E}
 .quiz-bits{font-family:var(--mono);font-size:20px;line-height:2;display:flex;flex-wrap:wrap;gap:4px 18px}
@@ -344,6 +344,11 @@ textarea{width:100%;min-height:5em;resize:vertical}
 .gamecard span{font-size:13px;color:#B7C4CF}
 .gamecard .gb{justify-self:end;font-weight:700;color:#F5B83A;font-size:14px}
 .gamecard:hover{border-color:#FFD06A}
+.pwbox{background:#0E1A24;color:#E6EDF2;border:2px solid #F5B83A;border-radius:14px;padding:14px 16px;display:grid;gap:6px;justify-items:start}
+.pwbox .gk{font-size:12px;font-weight:700;letter-spacing:.12em;color:#5AA6F0}
+.pwbox .pw{font-family:var(--display);font-size:clamp(26px,4vw,36px);color:#F5B83A;letter-spacing:.08em}
+.pwbox p{margin:0;font-size:14px;color:#B7C4CF}
+.pwgo{font-weight:700;color:#0E1A24;background:#F5B83A;border-radius:999px;padding:6px 18px;text-decoration:none}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -714,6 +719,12 @@ textarea{width:100%;min-height:5em;resize:vertical}
       <div class="qwork" id="qWork"></div>
       <div class="ctrl"><button class="btn primary" id="qCheck">答え合わせ</button><button class="btn" id="qHint">ヒント</button><button class="btn" id="qNext">次の問題 →</button></div>
       <p class="msg" id="qMsg"></p>
+      <div class="pwbox" id="pwBox" hidden>
+        <div class="gk">パスワード ゲット！</div>
+        <div class="pw">みんなごうかく</div>
+        <p>最終問題の答えが、ボーナスゲーム「デジタル進化ラン」のパスワードです。</p>
+        <a class="pwgo" href="bit-runner.html" target="_blank" rel="noopener">デジタル進化ランをあそぶ →</a>
+      </div>
       <div class="tbl"><table class="codetbl" id="codeTbl"></table></div>
       <p class="hint">黄色のマスは例の「あ」（2422）です。</p>
     </div>
@@ -750,7 +761,7 @@ textarea{width:100%;min-height:5em;resize:vertical}
       <p>細かく区切るほど本物に近づくが、( <button class="blank" data-a="情報の量"></button> )は大きくなる。</p>
       <p><span class="hint">最後に「ふり返り」の○と感想を書こう。</span></p>
     </div>
-    <a class="gamecard" href="bit-runner.html" target="_blank" rel="noopener"><span class="gk">ボーナスゲーム</span><b>デジタル進化ラン</b><span>ステージが進むと、2色のドット絵からフルカラーへ。色の数と画素がふえると、絵と情報量はどう変わる？</span><span class="gb">あそぶ →</span></a>
+    <a class="gamecard" href="bit-runner.html" target="_blank" rel="noopener"><span class="gk">ボーナスゲーム</span><b>デジタル進化ラン</b><span>ステージが進むと、2色のドット絵からフルカラーへ。色の数と画素がふえると、絵と情報量はどう変わる？</span><span>※ あそぶには、暗号解読の最終問題でわかるパスワードが必要です。</span><span class="gb">あそぶ →</span></a>
     <p class="hint">次の時間：情報のデジタル化(2)（画像・動画）とデジタル情報の特徴</p>
   </div>
 </div>
@@ -1030,7 +1041,7 @@ $('#hex4').innerHTML='<tr><th>2進数</th><th>10進数</th><th>16進数</th></tr
   let h='<tr><th class="corner">最初の3けた ↓<br>最後の1けた →</th>'+[...Array(16)].map((_,i)=>`<th>${hex(i,1)}</th>`).join('')+'</tr>';
   for(let r=2;r<=7;r++){h+=`<tr><th>24${r}□</th>`;for(let c=0;c<16;c++){const code=0x2400+r*16+c,ch=(code>=0x2421&&code<=0x2473)?(inv.get(code)||''):'';h+=`<td data-c="${code}"${code===0x2422?' class="ex"':''}>${ch}</td>`}h+='</tr>'}
   $('#codeTbl').innerHTML=h})();
-const words=['いぬ','すし','さくら','でんき','ぱそこん','いりえかんじ'];let qi=0,hint=0;
+const words=['いぬ','すし','さくら','みんなごうかく'];let qi=0,hint=0;
 function qDraw(){const w=[...words[qi]],m=jis();hint=0;
   $('#qNo').textContent=qi===words.length-1?`最終問題（${qi+1} / ${words.length}）`:`問題 ${qi+1} / ${words.length}`;
   $('#qWork').innerHTML=w.map((ch,k)=>{const code=m.get(ch)||0,hx=hex(code,4),bn=code.toString(2).padStart(16,'0');
@@ -1044,8 +1055,9 @@ $('#qHint').onclick=()=>{const w=[...words[qi]],m=jis();if(hint>=w.length)return
   $('#qMsg').className='msg';$('#qMsg').textContent=`${hint+1}文字目は16進数で ${hex(c,4)}（${hex(c,4).slice(0,3)}の行 × ${hex(c,4)[3]}の列）。表の青いマスを見よう。`;hint++};
 $('#qCheck').onclick=()=>{const a=$$('#qWork .qch').map(i=>i.value.trim()).join(''),ok=a===words[qi],last=qi===words.length-1;$('#qMsg').className='msg '+(ok?'ok':'bad');
   if(!a){$('#qMsg').textContent='「文字」の□に答えを書こう。';return}
-  $('#qMsg').textContent=ok?(last?`最終問題クリア！ 答えは「${words[qi]}」。先生の名前でした！ ${[...words[qi]].length*2}バイトのデータです。`:`正解！「${words[qi]}」は ${[...words[qi]].length*2}バイトのデータでした。「次の問題」へ進もう。`):'ちがう文字があります。16進数の□が緑になっているか確かめよう。';
-  if(ok)(last?[523,659,784,1047,1319]:[523,659,784,1047]).forEach((f,k)=>setTimeout(()=>beep(f,.09),k*80))};
+  $('#qMsg').textContent=ok?(last?`最終問題クリア！ 答えは「${words[qi]}」。${[...words[qi]].length*2}バイトのデータです。`:`正解！「${words[qi]}」は ${[...words[qi]].length*2}バイトのデータでした。「次の問題」へ進もう。`):'ちがう文字があります。16進数の□が緑になっているか確かめよう。';
+  if(ok)(last?[523,659,784,1047,1319]:[523,659,784,1047]).forEach((f,k)=>setTimeout(()=>beep(f,.09),k*80));
+  $('#pwBox').hidden=!(ok&&last)};
 qDraw();
 ['qMemo'].forEach(k=>{const el=$('#'+k);el.value=store.get('dl1-'+k)||'';el.oninput=()=>store.set('dl1-'+k,el.value)});
 
