@@ -335,6 +335,9 @@ textarea{width:100%;min-height:5em;resize:vertical}
 @keyframes bob{50%{transform:translateY(3px)}}
 .more:hover{background:var(--bit);color:var(--paper)}
 .screen.intro .more,.sumlist .more{grid-column:1/-1}
+.note.print{border:2px solid var(--wave);background:color-mix(in srgb,var(--wave) 6%,var(--paper))}
+.tag.pr{background:var(--wave);color:#fff}
+.pr-where{font-size:12px;font-weight:700;color:var(--wave);margin-left:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -384,7 +387,7 @@ textarea{width:100%;min-height:5em;resize:vertical}
     <h3>使い方</h3>
     <ol class="howto">
       <li><b>画面の上の「やること」</b>を、上から順番にやります。</li>
-      <li><b>右の「ノートにかこう」</b>で ( ？ ) に入る言葉を考えて、ノートに書きます。？を押すと答えが出ます。</li>
+      <li><b>右の「プリントにかこう」</b>で ( ？ ) に入る言葉を考えて、ワークシートに書きます。？を押すと答えが出ます。</li>
       <li>終わったら<b>下の「次へ」</b>で次の画面へ。左の一覧から好きな画面にも移動できます。</li>
     </ol>
   </div>
@@ -438,10 +441,11 @@ textarea{width:100%;min-height:5em;resize:vertical}
       <p>・デジタル：ざっくりだけど、だれが読んでも同じ数値になる。</p>
       <p>・刻みを細かくするほど、デジタルはアナログに近づく。</p>
     </div>
-    <div class="note"><span class="tag">ノートにかこう</span>
-      <p>(1) ( <button class="blank" data-a="アナログ"></button> ) 情報を切れ目のない連続した量で表す方式</p>
-      <p>(2) ( <button class="blank" data-a="デジタル"></button> ) 情報を区切られた段階的な値（数値）で表す方式</p>
-      <p>・アナログ情報からデジタル情報への変換を ( <button class="blank" data-a="デジタル化"></button> ) という。</p>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>・アナログは( <button class="blank" data-a="細かいところ"></button> )まで読めるが、デジタルは( <button class="blank" data-a="ざっくり"></button> )表す。</p>
+      <p>・( <button class="blank" data-a="アナログ"></button> )…情報を切れ目のない連続した量で表す方式</p>
+      <p>・( <button class="blank" data-a="デジタル"></button> )…情報を区切られた段階的な値（数値）で表す方式</p>
+      <p>・アナログ情報からデジタル情報への変換を( <button class="blank" data-a="デジタル化"></button> )という。</p>
     </div>
   </div>
 </div>
@@ -505,15 +509,17 @@ textarea{width:100%;min-height:5em;resize:vertical}
         <dt>24ビット（約1,677万通り）</dt><dd>フルカラーの色。スマホの写真の1つの点の色。</dd>
       </dl>
     </div>
-    <div class="note"><span class="tag">ノートにかこう</span>
-      <p>・コンピュータは ( <button class="blank" data-a="0"></button> ) と ( <button class="blank" data-a="1"></button> ) の二つの状態の組み合わせで表現されたデジタル情報を処理する。</p>
-      <p>(1) 8bit ＝ 1 ( <button class="blank" data-a="B"></button> ) 読み方 ( <button class="blank" data-a="バイト"></button> )</p>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>・電気が流れていない状態を( <button class="blank" data-a="0"></button> )、流れている状態を( <button class="blank" data-a="1"></button> )とする。</p>
+      <p>・「0か1か」の1つ分を1( <button class="blank" data-a="ビット"></button> )という。</p>
+      <p>・ミッション：13を2進数で書くと( <button class="blank" data-a="00001101"></button> )</p>
+      <p>・8bit＝1( <button class="blank" data-a="B"></button> )（読み方：<button class="blank" data-a="バイト"></button>）　8ビットで( <button class="blank" data-a="256"></button> )通りを表せる。</p>
     </div>
   </div>
 </div>
 
 <!-- ===== 2-2 ===== -->
-<div class="screen" data-n="2" data-t="単位の階段" data-s="B・KB・MB・GB・TB" data-todo="「×1,024 して次へ」を押して、単位の階段をのぼる|右の「なぜ1,024？」で電球を1個ずつふやす|右のノートの ( ) に入る単位と読み方を書く" hidden>
+<div class="screen" data-n="2" data-t="単位の階段" data-s="B・KB・MB・GB・TB" data-todo="「×1,024 して次へ」を押して、単位の階段をのぼる|右の「なぜ1,024？」で電球を1個ずつふやす|右の「プリントにかこう」の ( ) をワークシートに書く" hidden>
   <div class="head"><div class="kind">整理しよう 2</div><h2>情報の量の単位</h2>
     <p class="lead">情報の量の単位は、1,024倍ずつ大きくなります。ボタンを押して、階段をのぼろう。</p></div>
   <div class="main">
@@ -536,11 +542,10 @@ textarea{width:100%;min-height:5em;resize:vertical}
     </div>
   </div>
   <div class="aside">
-    <div class="note"><span class="tag">ノートにかこう</span>
-      <p>(2) 1,024B ＝ 1 ( <button class="blank" data-a="KB"></button> )<br>読み方 ( <button class="blank" data-a="キロバイト"></button> )</p>
-      <p>(3) 1,024KB ＝ 1 ( <button class="blank" data-a="MB"></button> )<br>読み方 ( <button class="blank" data-a="メガバイト"></button> )</p>
-      <p>(4) 1,024MB ＝ 1 ( <button class="blank" data-a="GB"></button> )<br>読み方 ( <button class="blank" data-a="ギガバイト"></button> )</p>
-      <p>(5) 1,024GB ＝ 1 ( <button class="blank" data-a="TB"></button> )<br>読み方 ( <button class="blank" data-a="テラバイト"></button> )</p>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>・1,024B＝1( <button class="blank" data-a="KB"></button> )　1,024KB＝1( <button class="blank" data-a="MB"></button> )</p>
+      <p>・1,024MB＝1( <button class="blank" data-a="GB"></button> )　1,024GB＝1( <button class="blank" data-a="TB"></button> )</p>
+      <p>・1,024＝2の( <button class="blank" data-a="10"></button> )乗。0と1の2種類を、( <button class="blank" data-a="10"></button> )回かけた数。</p>
     </div>
   </div>
 </div>
@@ -548,7 +553,7 @@ textarea{width:100%;min-height:5em;resize:vertical}
 <!-- ===== 3-1 ===== -->
 <div class="screen" data-n="3" data-t="音を0と1にする" data-s="A／D変換の5ステップ" data-todo="音を選ぶ（自分の声を録音してもよい）|「次のステップ →」を押して、①〜⑤を順番に見る|区切る数や数値の段階を変えて、0と1の数がどう変わるか見る" hidden>
   <div class="head"><div class="kind">整理しよう 3</div><h2>音のデジタル化のしくみと A／D変換</h2>
-    <p class="lead">音を選ぶか、自分の声を録音しよう。ノートの①〜⑤と同じ順番で、音が0と1に変わるようすを見ていきます。</p></div>
+    <p class="lead">音を選ぶか、自分の声を録音しよう。ワークシートの①〜⑤と同じ順番で、音が0と1に変わるようすを見ていきます。</p></div>
   <div class="main">
     <div class="lab">
       <div class="ctrl">
@@ -573,13 +578,10 @@ textarea{width:100%;min-height:5em;resize:vertical}
     </div>
   </div>
   <div class="aside">
-    <div class="note"><span class="tag">ノートにかこう</span>
-      <p>・アナログ信号からデジタル信号への変換を ( <button class="blank" data-a="A/D変換"></button> ) という。</p>
-      <p>① マイクで音を録音する。</p>
-      <p>② ( <button class="blank" data-a="電気信号"></button> ) に変換する。</p>
-      <p>③ 信号を一定時間で ( <button class="blank" data-a="区切る"></button> )。</p>
-      <p>④ ( <button class="blank" data-a="数値"></button> ) を求める。</p>
-      <p>⑤ 数値を0と ( <button class="blank" data-a="1"></button> ) の組み合わせに変換する。</p>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>① マイクで音を録音する → ②( <button class="blank" data-a="電気信号"></button> )に変換する</p>
+      <p>→ ③ 一定時間で( <button class="blank" data-a="区切る"></button> ) → ④( <button class="blank" data-a="数値"></button> )を求める</p>
+      <p>→ ⑤ 0と1に変換する</p>
     </div>
   </div>
 </div>
@@ -632,6 +634,10 @@ textarea{width:100%;min-height:5em;resize:vertical}
       <p>・CDの音質（44,100回・16ビット）と比べてみよう。</p>
       <p>・CDとハイレゾ、情報の量はどのくらいちがう？</p>
     </div>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>・細かく区切るほど、音は( <button class="blank" data-a="よく"></button> )なるが、情報の量は( <button class="blank" data-a="大きく"></button> )なる。</p>
+      <p>・CDは1秒に( <button class="blank" data-a="44,100"></button> )回区切っている。</p>
+    </div>
   </div>
 </div>
 
@@ -666,10 +672,10 @@ textarea{width:100%;min-height:5em;resize:vertical}
         <li><b>絵文字</b>：😀にも文字コードがあります。今のスマホやWebページでは、世界中の文字と絵文字を1つの表にまとめたUnicode（ユニコード）がよく使われています。</li>
       </ul>
     </div>
-    <div class="note"><span class="tag">ノートにかこう</span>
-      <p>・文字をデジタル化させるときに、数字に対応させるルールを ( <button class="blank" data-a="文字コード"></button> ) という。</p>
-      <p>③ 一致する数値を ( <button class="blank" data-a="文字コード"></button> ) で探す。</p>
-      <p>④ 文字コードを ( <button class="blank" data-a="2進数"></button> ) に変換する。</p>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>・文字を数字に対応させるルールを( <button class="blank" data-a="文字コード"></button> )という。</p>
+      <p>・自分の名前の1文字目：文字（　　）→ 文字コード（　　　　）→ 2進数</p>
+      <p><span class="hint">↑ 下の名前カードを見て、自分の名前で書こう。</span></p>
     </div>
   </div>
 </div>
@@ -707,6 +713,10 @@ textarea{width:100%;min-height:5em;resize:vertical}
     </div>
   </div>
   <div class="aside">
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>・16進数は0〜9と( <button class="blank" data-a="A"></button> )〜( <button class="blank" data-a="F"></button> )の16種類。</p>
+      <p>・2進数( <button class="blank" data-a="4"></button> )けた＝16進数1けた。</p>
+    </div>
     <div class="lab"><h3>メモ欄</h3><textarea id="qMemo" placeholder="計算や考えたことを自由に書こう" style="min-height:8em"></textarea></div>
     <div class="lab"><h3>2進数・10進数・16進数</h3><div class="tbl"><table class="h3tbl" id="hex4"></table></div></div>
   </div>
@@ -729,7 +739,11 @@ textarea{width:100%;min-height:5em;resize:vertical}
     <div class="lab"><h3>今日のキーワード</h3>
       <div class="kw"><span>アナログ</span><span>デジタル</span><span>デジタル化</span><span>ビット</span><span>バイト</span><span>2進数</span><span>16進数</span><span>A/D変換</span><span>文字コード</span></div>
     </div>
-    <div class="note"><span class="tag think">ふり返ろう</span><p>ノートの「ふり返ろう」と「学びをいかそう」を書こう。</p></div>
+    <div class="note print"><span class="tag pr">プリントにかこう</span><span class="pr-where">ワークシート</span>
+      <p>アナログの情報は、一定の間かくで( <button class="blank" data-a="区切り"></button> )、( <button class="blank" data-a="数値"></button> )にし、( <button class="blank" data-a="0"></button> )と( <button class="blank" data-a="1"></button> )の組み合わせに変えると、コンピュータで扱える。</p>
+      <p>細かく区切るほど本物に近づくが、( <button class="blank" data-a="情報の量"></button> )は大きくなる。</p>
+      <p><span class="hint">最後に「ふり返り」の○と感想を書こう。</span></p>
+    </div>
     <p class="hint">次の時間：情報のデジタル化(2)（画像・動画）とデジタル情報の特徴</p>
   </div>
 </div>
@@ -805,7 +819,9 @@ function forward(){if(rev[cur]<steps[cur].length)reveal();else nav(cur+1)}
 $('#prevBtn').onclick=()=>nav(cur-1);$('#nextBtn').onclick=forward;
 document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName))return;if(e.key==='ArrowRight')forward();if(e.key==='ArrowLeft')nav(cur-1)});
 
-/* ---------- ノートの( ) ---------- */
+/* プリント欄を右側のいちばん上に */
+$$('.aside').forEach(a=>{const n=a.querySelector('.note.print');if(n)a.prepend(n)});
+/* ---------- プリントの( ) ---------- */
 const blanks=$$('.blank');
 blanks.forEach(b=>{b.textContent='？';b.setAttribute('aria-label','答えを見る');b.onclick=()=>{const o=!b.classList.contains('open');b.classList.toggle('open',o);b.textContent=o?b.dataset.a:'？'}});
 $('#ansAll').onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';e.currentTarget.setAttribute('aria-pressed',on);
